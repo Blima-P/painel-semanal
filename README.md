@@ -54,7 +54,7 @@ App da web não pode ter widget próprio no iPhone, então o widget roda no **Sc
 Também funciona na tela bloqueada (circular, retangular e em linha). **Tocar no widget abre o painel** instalado: ele usa o link `webapp://` do iOS, que não é oficial da Apple. Se algum dia abrir o app errado, mude `ABRIR_PAINEL` para `false` no começo do script dentro do Scriptable.
 
 - **Sequência** = dias seguidos com pelo menos **80%** feito. O % muda em `CONFIG.settings.streakMinPct`. No domingo só contam os hábitos (sem treino nem estudo), e o dia de hoje ainda em aberto não quebra a sequência.
-- O painel envia só números (% e sequência) para um **Gist secreto** no seu GitHub, sempre que você marca algo. O widget lê de lá e se atualiza a cada ~15 min (quem decide a hora exata é o iOS).
+- O painel envia só números (% e sequência) para um **Gist secreto** no seu GitHub, na hora em que você marca algo. Quem decide quando o widget redesenha é o iOS (normalmente a cada 5–15 min). **Pra atualizar na hora:** toque em **↻ Atualizar widget** na tela Hoje. O Scriptable abre por um instante com os dados novos e volta sozinho pro painel. Funciona até sem internet; o script precisa se chamar **Painel**.
 - A chave fica **só no celular**: não vai no backup nem no código. Para parar, use **Desconectar**.
 
 ---
@@ -104,7 +104,7 @@ O agente mexe no objeto `CONFIG` no topo do `index.html` (datas, metas, demandas
 ## 🛠️ Pros curiosos
 
 - `index.html`: o app inteiro (HTML + CSS + JS), sem build e sem dependências. O `CONFIG` fica no topo.
-- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v6` → `painel-v7`).
+- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v7` → `painel-v8`).
 - `manifest.json` + ícones: deixam instalar como app.
 - `widget.js`: script do widget pro Scriptable (o botão **Copiar script** já preenche o id do Gist).
 - Os dados ficam no `localStorage` com a chave `painelSemanal.v1`.

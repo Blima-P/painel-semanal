@@ -10,6 +10,7 @@ const FILE = 'painel-widget.json';
 // Ao tocar no widget: true abre o painel instalado na tela de início (link webapp:// do iOS, não oficial).
 // Se abrir o app errado, troque para false: aí o toque abre só o Scriptable.
 const ABRIR_PAINEL = true;
+const WEBAPP = 'webapp://' + APP.replace(/^https?:\/\//, '');
 
 const COL = {
   bg1: '#13214a', bg2: '#05081a', glow: '#0a84ff',
@@ -27,9 +28,21 @@ const col = (hex, a = 1) => new Color(hex, a);
 const pctTxt = p => p == null ? 'livre' : Math.round(p * 100) + '%';
 
 /* ---------- dados ---------- */
+const Q = args.queryParameters || {}; // vem do botão "Atualizar widget" do painel
+const newer = (a, b) => !a ? b : !b ? a : String(a.updated || '') >= String(b.updated || '') ? a : b;
+
 async function loadData() {
   const fm = FileManager.local();
   const cache = fm.joinPath(fm.documentsDirectory(), 'painel-widget-cache.json');
+  let best = null;
+  try { best = fm.fileExists(cache) ? JSON.parse(fm.readString(cache)) : null; } catch (e) { best = null; }
+  if (Q.dados) {
+    try {
+      let s = Q.dados; if (!s.trim().startsWith('{')) s = decodeURIComponent(s);
+      const d = JSON.parse(s);
+      if (d && d.app === 'painel-semanal') best = newer(d, best);
+    } catch (e) { /* link quebrado: segue com o Gist */ }
+  }
   let owner = OWNER, gist = GIST;
   const param = String(args.widgetParameter || '').trim(); // opcional: "usuario/idDoGist"
   if (param.includes('/')) [owner, gist] = param.split('/');
@@ -38,10 +51,11 @@ async function loadData() {
       const r = new Request(`https://gist.githubusercontent.com/${owner}/${gist}/raw/${FILE}?t=${Date.now()}`);
       r.timeoutInterval = 12;
       const d = await r.loadJSON();
-      if (d && d.app === 'painel-semanal') { fm.writeString(cache, JSON.stringify(d)); return d; }
+      if (d && d.app === 'painel-semanal') best = newer(d, best);
     } catch (e) { /* sem internet: usa o último dado salvo */ }
   }
-  try { return fm.fileExists(cache) ? JSON.parse(fm.readString(cache)) : null; } catch (e) { return null; }
+  if (best) fm.writeString(cache, JSON.stringify(best));
+  return best;
 }
 
 function model(d) {
@@ -225,9 +239,10 @@ function drawCircular(m) {
 /* ---------- montagem ---------- */
 function build(data) {
   const fam = config.widgetFamily || 'medium', m = data ? model(data) : null, w = new ListWidget();
-  w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
+  // pede ao iOS para redesenhar logo; quem decide a hora exata é o sistema
+  w.refreshAfterDate = new Date(Date.now() + 5 * 60 * 1000);
   // https:// abriria o Safari, que tem dados separados do app; webapp:// abre o app da tela de início
-  if (ABRIR_PAINEL && /^https?:\/\//.test(APP)) w.url = 'webapp://' + APP.replace(/^https?:\/\//, '');
+  if (ABRIR_PAINEL && /^https?:\/\//.test(APP)) w.url = WEBAPP;
   if (fam === 'accessoryCircular') {
     w.addAccessoryWidgetBackground = true; w.setPadding(0, 0, 0, 0);
     const img = w.addImage(drawCircular(m)); img.applyFittingContentMode();
@@ -250,5 +265,9 @@ function build(data) {
 
 const widget = build(await loadData());
 if (config.runsInWidget) Script.setWidget(widget);
+else if (Q.atualizar) {
+  // chamado pelo painel: os dados já foram salvos acima, e abrir o Scriptable faz o iOS redesenhar o widget
+  if (ABRIR_PAINEL && /^https?:\/\//.test(APP)) Safari.open(WEBAPP);
+}
 else await widget.presentMedium();
 Script.complete();

@@ -409,6 +409,9 @@ input[type=text], input[type=time], input[type=number], input[type=password], se
 .script-ta { width: 100%; height: 150px; margin-top: 10px; border: 0; border-radius: 10px; background: var(--fill); color: inherit; padding: 10px; font: 12px/1.4 ui-monospace, Menlo, monospace; }
 .err { color: var(--danger-text); }
 .streak-l { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--c-habitos); }
+.w-pill { display: inline-flex; align-items: center; min-height: 32px; margin-top: 8px; padding: 0 12px; border-radius: 16px;
+  background: var(--fill); color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none; }
+.w-pill:active { opacity: .6; }
 select { -webkit-appearance: none; appearance: none; padding-right: 30px;
   background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
@@ -974,7 +977,7 @@ function renderDay() {
   let html = `<div class="chips" role="group" aria-label="Escolher dia">${chips}</div>`;
   html += `<section class="card hero-card"><div class="hero">${rings(ap, { label: 'Progresso por área', key: 'd-hero', sw: 8.5, gap: 2.2 })}
       <div class="grow"><div class="hero-k">${fmtLong(d)}</div>${numEl(pct, 'd-pct', 'big donut-txt')}
-        <div class="sub">${status}</div>${sk > 0 ? `<div class="streak-l">🔥 ${sk} ${sk === 1 ? 'dia seguido' : 'dias seguidos'}</div>` : ''}</div></div>
+        <div class="sub">${status}</div>${sk > 0 ? `<div class="streak-l">🔥 ${sk} ${sk === 1 ? 'dia seguido' : 'dias seguidos'}</div>` : ''}${d === t && widgetCfg() ? `<a class="w-pill" href="${esc(widgetPushURL())}" data-act="widget-push">↻ Atualizar widget</a>` : ''}</div></div>
       ${legend(ap, 'd', { trabalho: 'Folga', saude: 'Descanso', estudos: 'Livre' })}</section>`;
 
   if (day.events.length) html += `<div class="banner">📅 <b>Compromissos e prazos</b><ul>${day.events.map(e => `<li>${esc(e.text)}</li>`).join('')}</ul></div>`;
@@ -1511,6 +1514,7 @@ const actions = {
   'new-week': () => openNewWeek(),
   'export': () => exportJSON(),
   'widget-copy': () => copyWidgetScript(),
+  'widget-push': el => { el.href = widgetPushURL(); syncWidget(); },
   'widget-sync': async () => {
     toast('Atualizando…');
     const ok = await syncWidget(true);
@@ -1733,7 +1737,8 @@ async function syncWidget(force) {
   if (!force && key === wSent) return true;
   try {
     const r = await fetch(`https://api.github.com/gists/${encodeURIComponent(w.gistId)}`, {
-      method: 'PATCH', headers: ghHeaders(w.token), body: JSON.stringify({ files: { [WIDGET_FILE]: { content: JSON.stringify(data) } } })
+      method: 'PATCH', headers: ghHeaders(w.token), keepalive: true, // keepalive: termina de enviar mesmo se o app for fechado
+      body: JSON.stringify({ files: { [WIDGET_FILE]: { content: JSON.stringify(data) } } })
     });
     if (!r.ok) throw new Error(r.status === 401 ? 'chave expirada ou inválida' : r.status === 404 ? 'Gist não encontrado' : `erro ${r.status}`);
     wSent = key; patchWidgetCfg({ lastSync: new Date().toISOString(), error: null });
@@ -1769,6 +1774,10 @@ function loadWidgetScript() {
 }
 const fillScript = (t, w) => t.replace("'__GIST__'", `'${w.gistId}'`).replace("'__OWNER__'", `'${w.owner}'`)
   .replace("'__APP__'", `'${new URL('./', location.href).href}'`);
+// iOS só redesenha widgets quando quer; abrir o Scriptable força. O link já leva os dados (funciona até sem internet)
+// e o script volta sozinho para o painel.
+const WIDGET_SCRIPT = 'Painel';
+const widgetPushURL = () => `scriptable:///run/${WIDGET_SCRIPT}?atualizar=1&dados=${encodeURIComponent(JSON.stringify(widgetData()))}`;
 async function copyWidgetScript() {
   const w = widgetCfg();
   if (!w) return;
@@ -1805,7 +1814,7 @@ function widgetSection() {
     <button type="button" class="btn" data-act="widget-sync">Atualizar agora</button>
     <button type="button" class="btn danger" data-act="widget-off">Desconectar</button></div>
     <textarea id="wScriptTa" class="script-ta" readonly hidden aria-label="Script do widget"></textarea>
-    <p class="muted small">O widget se atualiza sozinho a cada ~15 min (quem decide a hora exata é o iPhone). Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>
+    <p class="muted small">Cada vez que você marca algo, o painel já envia os números. Mas quem decide quando o widget redesenha é o iPhone (normalmente em 5 a 15 min). Pra ver na hora, toque em <b>↻ Atualizar widget</b> na tela Hoje: o Scriptable abre por um instante e volta pro painel com o widget atualizado. Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>
     <p class="muted small">Já tinha o widget? Toque em <b>Copiar script</b> de novo e substitua o texto no Scriptable para o toque abrir o painel.</p>`;
 }
 
