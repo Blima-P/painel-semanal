@@ -41,7 +41,8 @@ const CONFIG = {
     ],
     workDays:  [0, 1, 2, 3, 4], // dias úteis (seg–sex)
     studyDays: [0, 1, 2, 3, 4, 5], // dias com meta de estudo (seg–sáb)
-    restDays:  [6]              // descanso total (domingo)
+    restDays:  [6],             // descanso total (domingo)
+    streakMinPct: 0.8           // % mínimo do dia para contar na sequência (widget)
   },
 
   // Metas semanais. "metric" = progresso calculado automaticamente.
@@ -399,9 +400,15 @@ details.sec > .inner { padding: 6px 16px 16px; }
 .ed-row input[type=text]:not(.ico-in) { order: -1; flex: 1 1 100%; }
 .ed-row .ico-in { width: 56px; flex: none; text-align: center; }
 .ed-row .push { margin-left: auto; }
-input[type=text], input[type=time], input[type=number], select {
+input[type=text], input[type=time], input[type=number], input[type=password], select {
   min-height: 44px; border: 0; border-radius: 10px; background: var(--fill); padding: 0 12px; font-size: 17px;
 }
+.steps { margin: 8px 0 12px; padding-left: 22px; }
+.steps li { margin: 6px 0; }
+.steps a { color: var(--primary); }
+.script-ta { width: 100%; height: 150px; margin-top: 10px; border: 0; border-radius: 10px; background: var(--fill); color: inherit; padding: 10px; font: 12px/1.4 ui-monospace, Menlo, monospace; }
+.err { color: var(--danger-text); }
+.streak-l { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--c-habitos); }
 select { -webkit-appearance: none; appearance: none; padding-right: 30px;
   background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
@@ -551,7 +558,7 @@ dialog.closing::backdrop { animation: fadeOut .23s ease forwards; }
 <div id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="newWeekDlg" aria-labelledby="nwTitle"><form method="dialog" class="dlg" id="newWeekForm"></form></dialog>
-<input type="file" id="importFile" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true">
+<input type="file" id="importFile" class="sr-only" tabindex="-1" aria-hidden="true">
 
 <script>
 'use strict';
@@ -810,6 +817,43 @@ function streak(hid, map) {
   return c;
 }
 
+/* Sequência geral: dias seguidos com pelo menos streakMinPct do dia feito.
+   Hoje em aberto não quebra; dias sem nada aplicável são pulados. */
+const streakMin = () => state.settings.streakMinPct ?? 0.8;
+function dayPctMap() {
+  const map = {};
+  state.history.forEach(w => (w.days || []).forEach(d => { map[d.date] = d.pct ?? null; }));
+  weekDates().forEach(d => { map[d] = dayPct(dayAreas(d)); });
+  return map;
+}
+function dayStreak(map = dayPctMap()) {
+  const t = todayISO(), min = streakMin() - 1e-9;
+  let count = 0, through = null;
+  for (let i = 0; i < 3700; i++) {
+    const d = addDays(t, -i);
+    if (!(d in map)) { if (i === 0) continue; break; }
+    const p = map[d];
+    if (p == null) continue;
+    if (p >= min) { count++; through ||= d; } else if (i === 0) continue; else break;
+  }
+  // dias "livres" logo depois do último dia contado não deixam a sequência expirar
+  while (through && through < addDays(t, -1) && map[addDays(through, 1)] === null) through = addDays(through, 1);
+  return { count, through };
+}
+function bestStreak(map, t = todayISO()) {
+  let best = 0, run = 0, prev = null;
+  const min = streakMin() - 1e-9;
+  Object.keys(map).sort().forEach(d => {
+    if (d > t) return;
+    if (prev && addDays(prev, 1) !== d) run = 0;
+    prev = d;
+    const p = map[d];
+    if (p == null) return;
+    if (p >= min) best = Math.max(best, ++run); else if (d !== t) run = 0;
+  });
+  return best;
+}
+
 function snapshotWeek() {
   const st = weekStats(), map = liveHabitMap();
   return {
@@ -926,10 +970,11 @@ function renderDay() {
 
   const ap = areaPctMap(areas);
   const status = isRest(wd) ? 'Descanso total 🛌' : pct == null ? 'Dia livre' : pct >= 1 ? 'Dia completo! 🎉' : pct >= .75 ? 'Quase lá 💪' : pct > 0 ? 'Bom ritmo, segue' : 'Bora começar?';
+  const sk = d === t ? dayStreak().count : 0;
   let html = `<div class="chips" role="group" aria-label="Escolher dia">${chips}</div>`;
   html += `<section class="card hero-card"><div class="hero">${rings(ap, { label: 'Progresso por área', key: 'd-hero', sw: 8.5, gap: 2.2 })}
       <div class="grow"><div class="hero-k">${fmtLong(d)}</div>${numEl(pct, 'd-pct', 'big donut-txt')}
-        <div class="sub">${status}</div></div></div>
+        <div class="sub">${status}</div>${sk > 0 ? `<div class="streak-l">🔥 ${sk} ${sk === 1 ? 'dia seguido' : 'dias seguidos'}</div>` : ''}</div></div>
       ${legend(ap, 'd', { trabalho: 'Folga', saude: 'Descanso', estudos: 'Livre' })}</section>`;
 
   if (day.events.length) html += `<div class="banner">📅 <b>Compromissos e prazos</b><ul>${day.events.map(e => `<li>${esc(e.text)}</li>`).join('')}</ul></div>`;
@@ -1228,7 +1273,7 @@ function listEditor(key, items, opts = {}) {
 }
 
 const SEC_COLOR = { 'ed-pref': 'var(--ring-off)', 'ed-metas': 'var(--primary)', 'ed-fixas': 'var(--c-saude)', 'ed-demandas': 'var(--c-trabalho)',
-  'ed-eventos': 'var(--danger)', 'ed-habitos': 'var(--c-habitos)', 'ed-backup': 'var(--ok)', 'ed-perigo': 'var(--danger)' };
+  'ed-eventos': 'var(--danger)', 'ed-habitos': 'var(--c-habitos)', 'ed-widget': 'var(--c-trabalho)', 'ed-backup': 'var(--ok)', 'ed-perigo': 'var(--danger)' };
 function sec(id, icon, title, inner) {
   return `<details class="sec" data-sec="${id}" ${ui.open.has(id) ? 'open' : ''}><summary><span class="tile" style="--accent:${SEC_COLOR[id] || 'var(--primary)'}" aria-hidden="true">${icon}</span>${title}</summary><div class="inner">${inner}</div></details>`;
 }
@@ -1250,10 +1295,12 @@ function renderEdit() {
   h += sec('ed-eventos', '📅', 'Compromissos, provas e prazos', weekDates().map(d => `<div class="sub-h">${WD_LONG[weekdayIdx(d)]} ${fmtBR(d)}</div>${listEditor('events:' + d, state.week.days[d].events, { placeholder: 'Ex.: 19h – simulado AWS' })}`).join(''));
   h += sec('ed-habitos', '✅', 'Hábitos', `<p class="muted small">Use a chave para ligar ou desligar (os extras sugeridos já vêm ativos). Água, estudo e acordar usam as metas de Preferências.</p>
     ${listEditor('habits', state.habits, { icons: true, toggle: true, when: true, placeholder: 'Novo hábito' })}`);
+  h += sec('ed-widget', '📲', 'Widget do iPhone', widgetSection());
   h += sec('ed-backup', '💾', 'Backup (JSON)', `<p class="small">O histórico fica salvo neste aparelho até você apagar. Exporte uma cópia (Arquivos, iCloud, WhatsApp) para não perder nada se trocar de celular ou apagar o app.</p>
     <p class="muted small">Último backup: ${localStorage.getItem(BACKUP_KEY) ? fmtBR(localStorage.getItem(BACKUP_KEY)) : 'nunca'}</p>
     <div class="row" style="flex-wrap:wrap"><button type="button" class="btn primary" data-act="export">⬇️ Exportar JSON</button>
-    <button type="button" class="btn" data-act="import">⬆️ Importar JSON</button></div>`);
+    <button type="button" class="btn" data-act="import">⬆️ Importar JSON</button></div>
+    <p class="muted small">No iPhone: em <b>Exportar</b>, escolha <b>Salvar em Arquivos</b> (ou iCloud Drive / WhatsApp). Em <b>Importar</b>, toque em <b>Escolher Arquivo</b> e pegue o <i>painel-backup-….json</i>.</p>`);
   h += sec('ed-perigo', '⚠️', 'Zona de perigo', `<p class="small">Apaga tudo deste aparelho (semana, histórico e edições) e volta para a configuração inicial.</p>
     <button type="button" class="btn danger" data-act="reset-all">Apagar todos os dados</button>`);
   h += `<p class="muted small" style="text-align:center">Configuração v${CONFIG.configVersion} · semana ${fmtBR(state.week.start)}–${fmtBR(weekEnd())}</p>`;
@@ -1408,6 +1455,7 @@ function commit(popKey) {
   save();
   if (popKey) { ui.pop = popKey; ui.didToggle = true; haptic(); }
   render();
+  queueWidgetSync();
 }
 
 let toastTimer;
@@ -1462,6 +1510,16 @@ const actions = {
   'toggle-enabled': el => { const h = state.habits.find(x => x.id === el.dataset.id); if (h) { h.enabled = !h.enabled; commit(); } },
   'new-week': () => openNewWeek(),
   'export': () => exportJSON(),
+  'widget-copy': () => copyWidgetScript(),
+  'widget-sync': async () => {
+    toast('Atualizando…');
+    const ok = await syncWidget(true);
+    render(); toast(ok ? 'Widget atualizado ✓' : `Não deu: ${widgetCfg()?.error || 'sem conexão'}`);
+  },
+  'widget-off': () => {
+    if (!confirm('Desconectar o widget? Ele para de atualizar. O Gist continua no seu GitHub (dá pra apagar lá).')) return;
+    setWidgetCfg(null); wSent = null; render(); toast('Widget desconectado');
+  },
   'import': () => document.getElementById('importFile').click(),
   'reset-all': () => {
     if (!confirm('Apagar TODOS os dados deste aparelho? Exporte um backup antes, se quiser.')) return;
@@ -1514,6 +1572,8 @@ app.addEventListener('change', e => {
 });
 
 app.addEventListener('submit', e => {
+  const wf = e.target.closest('form[data-widget-connect]');
+  if (wf) { e.preventDefault(); connectWidget(String(new FormData(wf).get('token') || '')); return; }
   const form = e.target.closest('form[data-add]');
   if (!form) return;
   e.preventDefault();
@@ -1598,15 +1658,31 @@ dlg.addEventListener('close', () => {
 });
 
 /* ============================== Backup ============================== */
-function exportJSON() {
-  const data = { app: 'painel-semanal', exportedAt: new Date().toISOString(), configVersion: CONFIG.configVersion, state };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+function downloadFile(text, name) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = `painel-backup-${todayISO()}.json`;
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  localStorage.setItem(BACKUP_KEY, todayISO());
-  toast('Backup exportado'); render();
+}
+// No iPhone (app da tela inicial) o download por link só abre uma prévia sem opção de salvar,
+// então usamos a folha de compartilhar, que tem "Salvar em Arquivos".
+async function exportJSON() {
+  const data = { app: 'painel-semanal', exportedAt: new Date().toISOString(), configVersion: CONFIG.configVersion, state };
+  const text = JSON.stringify(data, null, 2), name = `painel-backup-${todayISO()}.json`;
+  const done = msg => { localStorage.setItem(BACKUP_KEY, todayISO()); toast(msg); render(); };
+  if (navigator.canShare && navigator.share) {
+    for (const type of ['application/json', 'text/plain']) {
+      const file = new File([text], name, { type });
+      if (!navigator.canShare({ files: [file] })) continue;
+      try { await navigator.share({ files: [file] }); done('Backup salvo'); }
+      catch (e) {
+        if (e.name === 'AbortError') return toast('Backup cancelado');
+        downloadFile(text, name); done('Backup exportado');
+      }
+      return;
+    }
+  }
+  downloadFile(text, name); done('Backup exportado');
 }
 document.getElementById('importFile').addEventListener('change', async e => {
   const file = e.target.files?.[0]; e.target.value = '';
@@ -1622,6 +1698,115 @@ document.getElementById('importFile').addEventListener('change', async e => {
   }
 });
 
+/* ============================== Widget (Scriptable) ============================== */
+// O painel manda só um resumo (sequência, % de hoje e da semana) para um Gist privado;
+// o widget do Scriptable (widget.js) lê esse Gist. A chave fica só neste aparelho e não vai no backup.
+const WIDGET_KEY = 'painelSemanal.widget', WIDGET_FILE = 'painel-widget.json';
+const widgetCfg = () => { try { return JSON.parse(localStorage.getItem(WIDGET_KEY)) || null; } catch (e) { return null; } };
+const setWidgetCfg = v => v ? localStorage.setItem(WIDGET_KEY, JSON.stringify(v)) : localStorage.removeItem(WIDGET_KEY);
+const patchWidgetCfg = v => { const cur = widgetCfg(); if (cur) setWidgetCfg({ ...cur, ...v }); };
+const ghHeaders = token => ({ Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' });
+
+function widgetData() {
+  const t = todayISO(), st = weekStats(), map = dayPctMap(), s = dayStreak(map);
+  const td = st.per.find(p => p.date === t);
+  return {
+    app: 'painel-semanal', v: 1, updated: new Date().toISOString(), today: t, minPct: streakMin(),
+    streak: s.count, through: s.through, best: Math.max(bestStreak(map, t), s.count),
+    todayPct: td ? td.pct : 0,
+    areas: td ? Object.fromEntries(AREAS.map(a => [a.id, td.areas[a.id].pct])) : {},
+    left: td ? Object.values(td.areas).reduce((a, x) => a + x.total - x.done, 0) : null,
+    week: st.per.map(p => ({ d: p.date, pct: p.pct, rest: isRest(weekdayIdx(p.date)) }))
+  };
+}
+
+let wTimer = null, wSent = null, wScript = null;
+function queueWidgetSync() {
+  if (!widgetCfg()?.gistId) return;
+  clearTimeout(wTimer); wTimer = setTimeout(syncWidget, 2500);
+}
+async function syncWidget(force) {
+  clearTimeout(wTimer);
+  const w = widgetCfg();
+  if (!w?.gistId) return false;
+  const data = widgetData(), key = JSON.stringify({ ...data, updated: null });
+  if (!force && key === wSent) return true;
+  try {
+    const r = await fetch(`https://api.github.com/gists/${encodeURIComponent(w.gistId)}`, {
+      method: 'PATCH', headers: ghHeaders(w.token), body: JSON.stringify({ files: { [WIDGET_FILE]: { content: JSON.stringify(data) } } })
+    });
+    if (!r.ok) throw new Error(r.status === 401 ? 'chave expirada ou inválida' : r.status === 404 ? 'Gist não encontrado' : `erro ${r.status}`);
+    wSent = key; patchWidgetCfg({ lastSync: new Date().toISOString(), error: null });
+    return true;
+  } catch (e) {
+    patchWidgetCfg({ error: e instanceof TypeError ? 'sem conexão' : e.message });
+    return false;
+  }
+}
+async function connectWidget(token) {
+  token = token.trim();
+  if (!/^(gh[pousr]_|github_pat_)\w{20,}$/.test(token)) return toast('Essa chave não parece do GitHub (começa com ghp_)');
+  toast('Conectando…');
+  try {
+    const r = await fetch('https://api.github.com/gists', {
+      method: 'POST', headers: ghHeaders(token),
+      body: JSON.stringify({ description: 'Painel Semanal: dados do widget (só números)', public: false, files: { [WIDGET_FILE]: { content: JSON.stringify(widgetData()) } } })
+    });
+    if (r.status === 401) throw new Error('Chave inválida ou expirada');
+    if (r.status === 403 || r.status === 404) throw new Error('A chave precisa da permissão "gist"');
+    if (!r.ok) throw new Error(`GitHub respondeu ${r.status}`);
+    const g = await r.json();
+    setWidgetCfg({ token, gistId: g.id, owner: g.owner?.login || '', lastSync: new Date().toISOString(), error: null });
+    wSent = null; ui.open.add('ed-widget'); render(); toast('Widget conectado ✓');
+    loadWidgetScript().catch(() => {});
+  } catch (e) {
+    toast(e instanceof TypeError ? 'Sem conexão com o GitHub' : e.message);
+  }
+}
+function loadWidgetScript() {
+  if (wScript) return Promise.resolve(wScript);
+  return fetch('widget.js').then(r => r.ok ? r.text() : Promise.reject(new Error(r.status))).then(t => (wScript = t));
+}
+const fillScript = (t, w) => t.replace("'__GIST__'", `'${w.gistId}'`).replace("'__OWNER__'", `'${w.owner}'`);
+async function copyWidgetScript() {
+  const w = widgetCfg();
+  if (!w) return;
+  try {
+    if (wScript) await navigator.clipboard.writeText(fillScript(wScript, w));
+    else await navigator.clipboard.write([new ClipboardItem({ 'text/plain': loadWidgetScript().then(t => new Blob([fillScript(t, w)], { type: 'text/plain' })) })]);
+    toast('Script copiado. Agora cole no Scriptable');
+  } catch (e) {
+    // sem permissão de área de transferência: mostra o texto para copiar na mão
+    const ta = document.getElementById('wScriptTa');
+    try { ta.value = fillScript(await loadWidgetScript(), w); } catch (_) { return toast('Não consegui carregar o script. Tem internet?'); }
+    ta.hidden = false; ta.focus(); ta.select(); toast('Toque e segure no texto → Selecionar tudo → Copiar');
+  }
+}
+function widgetSection() {
+  const w = widgetCfg(), min = Math.round(streakMin() * 100);
+  if (!w) return `<p class="small">Mostre sua <b>sequência de dias</b> e o progresso de hoje na tela de início, com um widget do app gratuito <b>Scriptable</b>. O painel manda só números (% e sequência) para um Gist privado no seu GitHub.</p>
+    <ol class="steps small">
+      <li>Instale o <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable</a> na App Store.</li>
+      <li><a href="https://github.com/settings/tokens/new?description=Painel%20widget&scopes=gist" target="_blank" rel="noopener">Crie uma chave no GitHub</a>: deixe marcado só <b>gist</b>, escolha a validade (pode ser <i>No expiration</i>), toque em <b>Generate token</b> e copie a chave.</li>
+      <li>Volte aqui, cole a chave e toque em <b>Conectar</b>.</li>
+    </ol>
+    <form class="row" data-widget-connect><input type="password" name="token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…" aria-label="Chave do GitHub" style="flex:1;min-width:0"><button class="btn primary" type="submit">Conectar</button></form>
+    <p class="muted small">A sequência conta os dias com pelo menos ${min}% feito.</p>`;
+  const when = w.lastSync ? new Date(w.lastSync).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'ainda não';
+  return `<p class="small"><b>Conectado ✓</b> · atualizado ${esc(when)}${w.error ? ` · <span class="err">${esc(w.error)}</span>` : ''}</p>
+    <ol class="steps small">
+      <li>Toque em <b>Copiar script</b>.</li>
+      <li>Abra o <b>Scriptable</b>, toque em <b>+</b>, cole o texto, toque no título lá em cima e renomeie para <b>Painel</b>. Toque em <b>OK</b>.</li>
+      <li>Na tela de início, segure num espaço vazio → <b>Editar</b> → <b>Adicionar widget</b> → <b>Scriptable</b> → escolha pequeno ou médio → <b>Adicionar widget</b>.</li>
+      <li>Toque no widget novo e, em <b>Script</b>, escolha <b>Painel</b>. Pronto!</li>
+    </ol>
+    <div class="row" style="flex-wrap:wrap"><button type="button" class="btn primary" data-act="widget-copy">Copiar script</button>
+    <button type="button" class="btn" data-act="widget-sync">Atualizar agora</button>
+    <button type="button" class="btn danger" data-act="widget-off">Desconectar</button></div>
+    <textarea id="wScriptTa" class="script-ta" readonly hidden aria-label="Script do widget"></textarea>
+    <p class="muted small">O widget se atualiza sozinho a cada ~15 min (quem decide a hora exata é o iPhone). Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>`;
+}
+
 /* ============================== Início ============================== */
 load();
 ui.day = defaultDay();
@@ -1632,7 +1817,11 @@ navigator.storage?.persist?.().catch(() => {});
 const navObs = () => document.body.classList.toggle('scrolled', window.scrollY > 44);
 window.addEventListener('scroll', navObs, { passive: true });
 
-document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) render();
+  syncWidget(); // ao abrir (o dia pode ter virado) e ao sair do app
+});
+if (widgetCfg()) { setTimeout(syncWidget, 1500); loadWidgetScript().catch(() => {}); }
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {

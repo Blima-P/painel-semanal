@@ -9,6 +9,7 @@ Meu painel de hábitos, metas e tarefas da semana. Feito pra usar no celular, fu
 - Barras de progresso, gráficos e sequência 🔥 de cada hábito
 - Botão **Nova semana**, com histórico e comparação entre semanas
 - Backup em JSON (exportar e importar)
+- Widget do iPhone com a sequência de dias (via Scriptable)
 - Modo claro e escuro
 
 ---
@@ -34,12 +35,27 @@ Meu painel de hábitos, metas e tarefas da semana. Feito pra usar no celular, fu
 Sim: todas as semanas ficam guardadas **até você apagar**, sem limite. O app ainda pede ao iOS armazenamento persistente. Só cuidado com três coisas:
 - **Use sempre pelo ícone da tela inicial.** No iPhone, o app instalado e a aba do Safari guardam dados **separados**.
 - **Apagar o ícone** do app ou **limpar os dados do Safari** (Ajustes → Safari → Limpar Histórico e Dados) apaga tudo.
-- Exporte um backup de vez em quando em Editar → Backup → **Exportar JSON** (salve em Arquivos/iCloud). O app avisa quando passar 1 mês sem backup.
+- Exporte um backup de vez em quando em Editar → Backup → **Exportar JSON**. No iPhone, abre a folha de compartilhar: escolha **Salvar em Arquivos** (ou iCloud Drive / WhatsApp). Para restaurar, use **Importar JSON** → **Escolher Arquivo**. O app avisa quando passar 1 mês sem backup.
 
 ### Visual
 Ele foi feito pra parecer app de iPhone: título grande, abas embaixo com efeito de vidro, anéis de progresso no estilo do app Fitness (🔵 Trabalho, 🔴 Saúde, 🟣 Estudos, 🟠 Hábitos), listas no estilo Lembretes e chaves de liga/desliga iguais às do iOS. Segue o modo claro/escuro do iPhone, ou você troca no botão do canto superior. No iOS 18+, marcar um item dá uma vibraçãozinha.
 
 Ao marcar algo, a rodinha se completa e desenha o ✓, os % sobem animados e a troca de aba/dia é suave. Quando o dia fecha em 100%, cai confete 🎉. Na aba Semana, as metas ficam recolhidas em **Metas da semana**: toque para abrir. Se o iPhone estiver com "Reduzir movimento" ligado, as animações são desligadas.
+
+### 📲 Widget do iPhone (sequência de dias)
+App da web não pode ter widget próprio no iPhone, então o widget roda no **Scriptable** (app gratuito que faz widgets por script). Ele mostra a sequência de dias seguidos, o % de hoje, os 4 anéis por área e a semana. Ele fica laranja quando a sequência está em risco e azul quando o dia está garantido.
+
+1. Instale o **Scriptable** na App Store.
+2. No painel: Editar → **Widget do iPhone** → toque em **Crie uma chave no GitHub**. Deixe marcado só **gist**, escolha a validade (pode ser *No expiration*), toque em **Generate token** e copie a chave (`ghp_…`).
+3. Cole a chave no painel e toque em **Conectar**.
+4. Toque em **Copiar script**. Abra o Scriptable, toque em **+**, cole, renomeie o script para **Painel** e toque em **OK**.
+5. Na tela de início: segure num espaço vazio → **Editar** → **Adicionar widget** → **Scriptable** → pequeno ou médio. Toque no widget e, em **Script**, escolha **Painel**.
+
+Também funciona na tela bloqueada (circular, retangular e em linha).
+
+- **Sequência** = dias seguidos com pelo menos **80%** feito. O % muda em `CONFIG.settings.streakMinPct`. No domingo só contam os hábitos (sem treino nem estudo), e o dia de hoje ainda em aberto não quebra a sequência.
+- O painel envia só números (% e sequência) para um **Gist secreto** no seu GitHub, sempre que você marca algo. O widget lê de lá e se atualiza a cada ~15 min (quem decide a hora exata é o iOS).
+- A chave fica **só no celular**: não vai no backup nem no código. Para parar, use **Desconectar**.
 
 ---
 
@@ -88,8 +104,9 @@ O agente mexe no objeto `CONFIG` no topo do `index.html` (datas, metas, demandas
 ## 🛠️ Pros curiosos
 
 - `index.html`: o app inteiro (HTML + CSS + JS), sem build e sem dependências. O `CONFIG` fica no topo.
-- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v4` → `painel-v5`).
+- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v5` → `painel-v6`).
 - `manifest.json` + ícones: deixam instalar como app.
+- `widget.js`: script do widget pro Scriptable (o botão **Copiar script** já preenche o id do Gist).
 - Os dados ficam no `localStorage` com a chave `painelSemanal.v1`.
 - Pra testar outra data: `?data=2026-11-01` no fim do link.
 

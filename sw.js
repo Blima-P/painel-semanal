@@ -1,6 +1,6 @@
 // Service worker: deixa o painel funcionando offline.
 // Ao publicar uma versão nova, aumente o número em CACHE.
-const CACHE = 'painel-v4';
+const CACHE = 'painel-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,8 @@ const ASSETS = [
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
-  './icon-maskable-512.png'
+  './icon-maskable-512.png',
+  './widget.js'
 ];
 
 self.addEventListener('install', event => {
