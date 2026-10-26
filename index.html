@@ -977,7 +977,7 @@ function renderDay() {
   let html = `<div class="chips" role="group" aria-label="Escolher dia">${chips}</div>`;
   html += `<section class="card hero-card"><div class="hero">${rings(ap, { label: 'Progresso por área', key: 'd-hero', sw: 8.5, gap: 2.2 })}
       <div class="grow"><div class="hero-k">${fmtLong(d)}</div>${numEl(pct, 'd-pct', 'big donut-txt')}
-        <div class="sub">${status}</div>${sk > 0 ? `<div class="streak-l">🔥 ${sk} ${sk === 1 ? 'dia seguido' : 'dias seguidos'}</div>` : ''}${d === t && widgetCfg() ? `<a class="w-pill" href="${esc(widgetPushURL())}" data-act="widget-push">↻ Atualizar widget</a>` : ''}</div></div>
+        <div class="sub">${status}</div>${sk > 0 ? `<div class="streak-l">🔥 ${sk} ${sk === 1 ? 'dia seguido' : 'dias seguidos'}</div>` : ''}${d === t && widgetCfg()?.auto === false ? `<a class="w-pill" href="${esc(widgetPushURL())}" data-act="widget-push">↻ Atualizar widget</a>` : ''}</div></div>
       ${legend(ap, 'd', { trabalho: 'Folga', saude: 'Descanso', estudos: 'Livre' })}</section>`;
 
   if (day.events.length) html += `<div class="banner">📅 <b>Compromissos e prazos</b><ul>${day.events.map(e => `<li>${esc(e.text)}</li>`).join('')}</ul></div>`;
@@ -1459,6 +1459,7 @@ function commit(popKey) {
   if (popKey) { ui.pop = popKey; ui.didToggle = true; haptic(); }
   render();
   queueWidgetSync();
+  if (popKey) autoPushWidget();
 }
 
 let toastTimer;
@@ -1514,7 +1515,8 @@ const actions = {
   'new-week': () => openNewWeek(),
   'export': () => exportJSON(),
   'widget-copy': () => copyWidgetScript(),
-  'widget-push': el => { el.href = widgetPushURL(); syncWidget(); },
+  'widget-push': el => { el.href = widgetPushURL(); wPushed = widgetKey(); syncWidget(); },
+  'widget-auto': () => { const w = widgetCfg(); if (w) { setWidgetCfg({ ...w, auto: w.auto === false }); wPushed = widgetKey(); render(); } },
   'widget-sync': async () => {
     toast('Atualizando…');
     const ok = await syncWidget(true);
@@ -1724,7 +1726,24 @@ function widgetData() {
   };
 }
 
-let wTimer = null, wSent = null, wScript = null;
+let wTimer = null, wSent = null, wScript = null, wPushed = null, wPushT = null;
+const widgetKey = () => JSON.stringify({ ...widgetData(), updated: null });
+// Só no app instalado no iPhone (no PC/Android o link scriptable:// não existe)
+const isIOSApp = () => (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+  && (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches);
+function openURL(u) { location.href = u; }
+// A cada marcação: espera a animação da rodinha e abre o Scriptable com os dados novos (ele volta sozinho).
+// Roda dentro do toque (até 1 s depois o iOS ainda considera "gesto do usuário"), por isso o atraso é curto.
+function autoPushWidget() {
+  const w = widgetCfg();
+  if (!w || w.auto === false || !isIOSApp()) return;
+  clearTimeout(wPushT);
+  wPushT = setTimeout(() => {
+    const k = widgetKey();
+    if (k === wPushed) return; // marcou e desmarcou: nada mudou
+    wPushed = k; openURL(widgetPushURL());
+  }, 700);
+}
 function queueWidgetSync() {
   if (!widgetCfg()?.gistId) return;
   clearTimeout(wTimer); wTimer = setTimeout(syncWidget, 2500);
@@ -1814,8 +1833,13 @@ function widgetSection() {
     <button type="button" class="btn" data-act="widget-sync">Atualizar agora</button>
     <button type="button" class="btn danger" data-act="widget-off">Desconectar</button></div>
     <textarea id="wScriptTa" class="script-ta" readonly hidden aria-label="Script do widget"></textarea>
-    <p class="muted small">Cada vez que você marca algo, o painel já envia os números. Mas quem decide quando o widget redesenha é o iPhone (normalmente em 5 a 15 min). Pra ver na hora, toque em <b>↻ Atualizar widget</b> na tela Hoje: o Scriptable abre por um instante e volta pro painel com o widget atualizado. Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>
-    <p class="muted small">Já tinha o widget? Toque em <b>Copiar script</b> de novo e substitua o texto no Scriptable para o toque abrir o painel.</p>`;
+    <div class="field" style="margin-top:8px"><span class="small">Atualizar o widget a cada marcação</span>
+      <button type="button" class="switch" data-act="widget-auto" aria-pressed="${w.auto !== false}" aria-label="Atualizar o widget a cada marcação"></button></div>
+    <p class="muted small">${w.auto !== false
+      ? 'Ligado: depois de cada marcação, o Scriptable abre por um instante e volta pro painel, e o widget já mostra o novo valor. Se ficar chato, desligue. Aí o widget atualiza sozinho a cada 5–15 min (quem decide é o iPhone) ou quando você tocar em <b>↻ Atualizar widget</b> na tela Hoje.'
+      : 'Desligado: o widget atualiza sozinho a cada 5–15 min (quem decide é o iPhone). Pra ver na hora, toque em <b>↻ Atualizar widget</b> na tela Hoje.'}
+      Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>
+    <p class="muted small">Já tinha o widget? Toque em <b>Copiar script</b> de novo e substitua o texto no Scriptable, porque o script mudou.</p>`;
 }
 
 /* ============================== Início ============================== */
@@ -1832,7 +1856,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) render();
   syncWidget(); // ao abrir (o dia pode ter virado) e ao sair do app
 });
-if (widgetCfg()) { setTimeout(syncWidget, 1500); loadWidgetScript().catch(() => {}); }
+if (widgetCfg()) { wPushed = widgetKey(); setTimeout(syncWidget, 1500); loadWidgetScript().catch(() => {}); }
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
