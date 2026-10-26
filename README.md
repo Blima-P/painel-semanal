@@ -51,7 +51,7 @@ App da web não pode ter widget próprio no iPhone, então o widget roda no **Sc
 4. Toque em **Copiar script**. Abra o Scriptable, toque em **+**, cole, renomeie o script para **Painel** e toque em **OK**.
 5. Na tela de início: segure num espaço vazio → **Editar** → **Adicionar widget** → **Scriptable** → pequeno ou médio. Toque no widget e, em **Script**, escolha **Painel**.
 
-Também funciona na tela bloqueada (circular, retangular e em linha).
+Também funciona na tela bloqueada (circular, retangular e em linha). **Tocar no widget abre o painel** instalado: ele usa o link `webapp://` do iOS, que não é oficial da Apple. Se algum dia abrir o app errado, mude `ABRIR_PAINEL` para `false` no começo do script dentro do Scriptable.
 
 - **Sequência** = dias seguidos com pelo menos **80%** feito. O % muda em `CONFIG.settings.streakMinPct`. No domingo só contam os hábitos (sem treino nem estudo), e o dia de hoje ainda em aberto não quebra a sequência.
 - O painel envia só números (% e sequência) para um **Gist secreto** no seu GitHub, sempre que você marca algo. O widget lê de lá e se atualiza a cada ~15 min (quem decide a hora exata é o iOS).
@@ -104,7 +104,7 @@ O agente mexe no objeto `CONFIG` no topo do `index.html` (datas, metas, demandas
 ## 🛠️ Pros curiosos
 
 - `index.html`: o app inteiro (HTML + CSS + JS), sem build e sem dependências. O `CONFIG` fica no topo.
-- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v5` → `painel-v6`).
+- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v6` → `painel-v7`).
 - `manifest.json` + ícones: deixam instalar como app.
 - `widget.js`: script do widget pro Scriptable (o botão **Copiar script** já preenche o id do Gist).
 - Os dados ficam no `localStorage` com a chave `painelSemanal.v1`.

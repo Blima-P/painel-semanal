@@ -1,11 +1,15 @@
 // Painel Semanal: widget para o app Scriptable (iPhone).
 // Mostra a sequência de dias, o progresso de hoje e a semana.
 // Tamanhos: pequeno, médio e tela bloqueada (circular, retangular e em linha).
-// O painel preenche GIST e OWNER quando você toca em "Copiar script" (Editar → Widget do iPhone).
+// O painel preenche GIST, OWNER e APP quando você toca em "Copiar script" (Editar → Widget do iPhone).
 
 const GIST = '__GIST__';
 const OWNER = '__OWNER__';
+const APP = '__APP__';
 const FILE = 'painel-widget.json';
+// Ao tocar no widget: true abre o painel instalado na tela de início (link webapp:// do iOS, não oficial).
+// Se abrir o app errado, troque para false: aí o toque abre só o Scriptable.
+const ABRIR_PAINEL = true;
 
 const COL = {
   bg1: '#13214a', bg2: '#05081a', glow: '#0a84ff',
@@ -222,6 +226,8 @@ function drawCircular(m) {
 function build(data) {
   const fam = config.widgetFamily || 'medium', m = data ? model(data) : null, w = new ListWidget();
   w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
+  // https:// abriria o Safari, que tem dados separados do app; webapp:// abre o app da tela de início
+  if (ABRIR_PAINEL && /^https?:\/\//.test(APP)) w.url = 'webapp://' + APP.replace(/^https?:\/\//, '');
   if (fam === 'accessoryCircular') {
     w.addAccessoryWidgetBackground = true; w.setPadding(0, 0, 0, 0);
     const img = w.addImage(drawCircular(m)); img.applyFittingContentMode();

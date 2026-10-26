@@ -1767,7 +1767,8 @@ function loadWidgetScript() {
   if (wScript) return Promise.resolve(wScript);
   return fetch('widget.js').then(r => r.ok ? r.text() : Promise.reject(new Error(r.status))).then(t => (wScript = t));
 }
-const fillScript = (t, w) => t.replace("'__GIST__'", `'${w.gistId}'`).replace("'__OWNER__'", `'${w.owner}'`);
+const fillScript = (t, w) => t.replace("'__GIST__'", `'${w.gistId}'`).replace("'__OWNER__'", `'${w.owner}'`)
+  .replace("'__APP__'", `'${new URL('./', location.href).href}'`);
 async function copyWidgetScript() {
   const w = widgetCfg();
   if (!w) return;
@@ -1798,13 +1799,14 @@ function widgetSection() {
       <li>Toque em <b>Copiar script</b>.</li>
       <li>Abra o <b>Scriptable</b>, toque em <b>+</b>, cole o texto, toque no título lá em cima e renomeie para <b>Painel</b>. Toque em <b>OK</b>.</li>
       <li>Na tela de início, segure num espaço vazio → <b>Editar</b> → <b>Adicionar widget</b> → <b>Scriptable</b> → escolha pequeno ou médio → <b>Adicionar widget</b>.</li>
-      <li>Toque no widget novo e, em <b>Script</b>, escolha <b>Painel</b>. Pronto!</li>
+      <li>Toque no widget novo e, em <b>Script</b>, escolha <b>Painel</b>. Pronto! Tocar no widget abre o painel.</li>
     </ol>
     <div class="row" style="flex-wrap:wrap"><button type="button" class="btn primary" data-act="widget-copy">Copiar script</button>
     <button type="button" class="btn" data-act="widget-sync">Atualizar agora</button>
     <button type="button" class="btn danger" data-act="widget-off">Desconectar</button></div>
     <textarea id="wScriptTa" class="script-ta" readonly hidden aria-label="Script do widget"></textarea>
-    <p class="muted small">O widget se atualiza sozinho a cada ~15 min (quem decide a hora exata é o iPhone). Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>`;
+    <p class="muted small">O widget se atualiza sozinho a cada ~15 min (quem decide a hora exata é o iPhone). Também dá pra pôr na tela bloqueada. A sequência conta os dias com pelo menos ${min}% feito.</p>
+    <p class="muted small">Já tinha o widget? Toque em <b>Copiar script</b> de novo e substitua o texto no Scriptable para o toque abrir o painel.</p>`;
 }
 
 /* ============================== Início ============================== */
