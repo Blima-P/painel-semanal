@@ -30,6 +30,15 @@ Meu painel de hábitos, metas e tarefas da semana. Feito pra usar no celular, fu
 > Depois de abrir uma vez com internet, o painel funciona **offline**.
 > Os dados ficam salvos **no próprio celular** e continuam lá depois de fechar o app.
 
+### 💾 O histórico fica salvo?
+Sim: todas as semanas ficam guardadas **até você apagar**, sem limite. O app ainda pede ao iOS armazenamento persistente. Só cuidado com três coisas:
+- **Use sempre pelo ícone da tela inicial.** No iPhone, o app instalado e a aba do Safari guardam dados **separados**.
+- **Apagar o ícone** do app ou **limpar os dados do Safari** (Ajustes → Safari → Limpar Histórico e Dados) apaga tudo.
+- Exporte um backup de vez em quando em Editar → Backup → **Exportar JSON** (salve em Arquivos/iCloud). O app avisa quando passar 1 mês sem backup.
+
+### Visual
+Ele foi feito pra parecer app de iPhone: título grande, abas embaixo com efeito de vidro, anéis de progresso no estilo do app Fitness (🔵 Trabalho, 🔴 Saúde, 🟣 Estudos, 🟠 Hábitos), listas no estilo Lembretes e chaves de liga/desliga iguais às do iOS. Segue o modo claro/escuro do iPhone, ou você troca no botão do canto superior. No iOS 18+, marcar um item dá uma vibraçãozinha.
+
 ---
 
 ## ✏️ Como editar (sem mexer em código)
@@ -43,12 +52,12 @@ Tudo pelo próprio app, na aba **Editar**:
 | Treino padrão de cada dia | Editar → **Atividades fixas** |
 | Demandas de cada dia | Editar → **Demandas por dia** ou direto no card **Trabalho** da aba Hoje |
 | Compromissos, provas e prazos | Editar → **Compromissos** |
-| Ligar/desligar os hábitos extras, criar hábito novo | Editar → **Hábitos** (botão Ativo/Off) |
-| Treino diferente só num dia | Aba Hoje → card **Saúde** → ✎ Editar |
+| Ligar/desligar os hábitos extras, criar hábito novo | Editar → **Hábitos** (chave liga/desliga) |
+| Treino diferente só num dia | Aba Hoje → card **Saúde** → Editar |
 | Backup | Editar → **Backup (JSON)** |
 
 ### Nova semana
-No domingo à noite ou na segunda, vá em **Semana → ➕ Nova semana**:
+No domingo à noite ou na segunda, vá em **Semana → Começar nova semana**:
 - a semana atual vai pro **Histórico**;
 - a próxima começa com os treinos fixos e os hábitos **desmarcados**;
 - dá pra escolher quais demandas/metas não concluídas **levar junto**.
@@ -77,7 +86,7 @@ O agente mexe no objeto `CONFIG` no topo do `index.html` (datas, metas, demandas
 ## 🛠️ Pros curiosos
 
 - `index.html`: o app inteiro (HTML + CSS + JS), sem build e sem dependências. O `CONFIG` fica no topo.
-- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v1` → `painel-v2`).
+- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v2` → `painel-v3`).
 - `manifest.json` + ícones: deixam instalar como app.
 - Os dados ficam no `localStorage` com a chave `painelSemanal.v1`.
 - Pra testar outra data: `?data=2026-11-01` no fim do link.

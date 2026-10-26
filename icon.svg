@@ -1,14 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6366f1"/>
-      <stop offset="1" stop-color="#3730a3"/>
-    </linearGradient>
-  </defs>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#222226"/><stop offset="1" stop-color="#08080c"/></linearGradient></defs>
   <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <rect x="110" y="300" width="56" height="100" rx="14" fill="#c7d2fe"/>
-  <rect x="190" y="250" width="56" height="150" rx="14" fill="#c7d2fe"/>
-  <rect x="270" y="200" width="56" height="200" rx="14" fill="#c7d2fe"/>
-  <rect x="350" y="150" width="56" height="250" rx="14" fill="#c7d2fe"/>
-  <path d="M120 200 L190 260 L330 110" fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="none"><circle cx="256" cy="256" r="185.6" stroke="#0a84ff" stroke-opacity=".28" stroke-width="38.4"/><circle cx="256" cy="256" r="185.6" stroke="#0a84ff" stroke-width="38.4" stroke-linecap="round" stroke-dasharray="956.3 1166.2" transform="rotate(-90 256 256)"/><circle cx="256" cy="256" r="140.0" stroke="#ff375f" stroke-opacity=".28" stroke-width="38.4"/><circle cx="256" cy="256" r="140.0" stroke="#ff375f" stroke-width="38.4" stroke-linecap="round" stroke-dasharray="598.3 879.8" transform="rotate(-90 256 256)"/><circle cx="256" cy="256" r="94.5" stroke="#bf5af2" stroke-opacity=".28" stroke-width="38.4"/><circle cx="256" cy="256" r="94.5" stroke="#bf5af2" stroke-width="38.4" stroke-linecap="round" stroke-dasharray="534.2 593.5" transform="rotate(-90 256 256)"/><circle cx="256" cy="256" r="48.9" stroke="#ff9f0a" stroke-opacity=".28" stroke-width="38.4"/><circle cx="256" cy="256" r="48.9" stroke="#ff9f0a" stroke-width="38.4" stroke-linecap="round" stroke-dasharray="184.3 307.2" transform="rotate(-90 256 256)"/></g>
 </svg>
