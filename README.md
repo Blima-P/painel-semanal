@@ -39,6 +39,8 @@ Sim: todas as semanas ficam guardadas **até você apagar**, sem limite. O app a
 ### Visual
 Ele foi feito pra parecer app de iPhone: título grande, abas embaixo com efeito de vidro, anéis de progresso no estilo do app Fitness (🔵 Trabalho, 🔴 Saúde, 🟣 Estudos, 🟠 Hábitos), listas no estilo Lembretes e chaves de liga/desliga iguais às do iOS. Segue o modo claro/escuro do iPhone, ou você troca no botão do canto superior. No iOS 18+, marcar um item dá uma vibraçãozinha.
 
+Ao marcar algo, a rodinha se completa e desenha o ✓, os % sobem animados e a troca de aba/dia é suave. Quando o dia fecha em 100%, cai confete 🎉. Na aba Semana, as metas ficam recolhidas em **Metas da semana**: toque para abrir. Se o iPhone estiver com "Reduzir movimento" ligado, as animações são desligadas.
+
 ---
 
 ## ✏️ Como editar (sem mexer em código)
@@ -86,7 +88,7 @@ O agente mexe no objeto `CONFIG` no topo do `index.html` (datas, metas, demandas
 ## 🛠️ Pros curiosos
 
 - `index.html`: o app inteiro (HTML + CSS + JS), sem build e sem dependências. O `CONFIG` fica no topo.
-- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v2` → `painel-v3`).
+- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v3` → `painel-v4`).
 - `manifest.json` + ícones: deixam instalar como app.
 - Os dados ficam no `localStorage` com a chave `painelSemanal.v1`.
 - Pra testar outra data: `?data=2026-11-01` no fim do link.

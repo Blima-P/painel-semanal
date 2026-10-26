@@ -208,39 +208,55 @@ nav.tabs svg { transition: transform .15s; }
 }
 .check:last-child::after, .counter-row:last-child::after, .daycard:last-child::after { display: none; }
 button.check:active { background: var(--fill); }
-.check .box {
-  flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ring-off);
-  display: grid; place-items: center; color: transparent; font-weight: 800; font-size: 14px;
-  transition: background .2s, border-color .2s, color .2s;
-}
+.check .box, .counter-row .box { flex: none; position: relative; display: block; width: 26px; height: 26px; }
+.box > svg { display: block; width: 100%; height: 100%; overflow: visible; transition: transform .18s cubic-bezier(.3, .7, .3, 1.3); }
+button.check:active .box > svg { transform: scale(.86); }
+.box .o { fill: transparent; stroke: var(--ring-off); stroke-width: 1.8; }
+.box .p { fill: none; stroke: var(--accent, var(--ok)); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 75.4; stroke-dashoffset: 75.4; }
+.box .m { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 17; stroke-dashoffset: 17; }
+.check.done .box .o { fill: var(--accent, var(--ok)); stroke: var(--accent, var(--ok)); }
+.check.done .box .m { stroke-dashoffset: 0; }
 .check .lbl { flex: 1; min-width: 0; }
 .check .lbl small, .counter-row .lbl small { display: block; color: var(--muted); font-size: 14px; margin-top: 1px; }
-.check.done .box { background: var(--accent, var(--ok)); border-color: var(--accent, var(--ok)); color: #fff; }
 .check.done > .lbl { color: var(--muted); }
-.check.na { cursor: default; }
-.check.na .box { border-style: dashed; color: var(--ring-off); }
-.check.na .lbl { color: var(--muted); }
+.na-line { padding: 10px 16px 4px !important; }
+.rest-msg { padding: 14px 16px !important; }
 .tag {
   display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; font-weight: 600;
   background: var(--fill); margin-left: 4px; vertical-align: middle; white-space: nowrap;
 }
-.streak {
-  flex: none; font-size: 13px; font-weight: 700; white-space: nowrap; padding: 3px 8px; border-radius: 99px;
-  background: color-mix(in srgb, var(--c-habitos) 16%, transparent);
-}
+.streak { flex: none; font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
 .counter-row .lbl { flex: 1; min-width: 0; }
 .counter-row.done .lbl small { color: var(--ok-text); font-weight: 600; }
-.counter-row.done .lbl small::before { content: "✓ "; }
-.counter { display: flex; align-items: center; gap: 2px; flex: none; }
+.counter { display: flex; align-items: center; gap: 8px; flex: none; }
 .counter button {
   width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--fill); color: var(--primary);
-  font-size: 26px; font-weight: 400; line-height: 1; display: grid; place-items: center; padding: 0 0 2px;
+  font-size: 24px; font-weight: 400; line-height: 1; display: grid; place-items: center; padding: 0 0 2px;
+  transition: transform .18s cubic-bezier(.3, .7, .3, 1.4), background-color .15s;
 }
-.counter button:active { background: var(--fill2); transform: scale(.92); }
-.counter output { min-width: 38px; text-align: center; font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; }
-.bottles { display: flex; gap: 4px; margin-top: 7px; max-width: 210px; }
-.bottles span { flex: 1; height: 8px; border-radius: 4px; background: var(--track); transition: background .25s; }
-.bottles span.on { background: var(--water); }
+.counter button:active { background: var(--fill2); transform: scale(.86); }
+
+/* ---------- anel único (cards, contadores, faixa da semana) ---------- */
+.ring1 { display: block; width: 100%; height: 100%; overflow: visible; }
+.ring1 circle, .rings circle { fill: none; stroke-linecap: round; }
+.ring1 .tick { fill: none; stroke-width: 11; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 56; stroke-dashoffset: 56; }
+.ring1.full .tick { stroke-dashoffset: 0; }
+.arc.z { opacity: 0; }
+.card > h3 .ring1 { width: 26px; height: 26px; flex: none; }
+.cnt { margin-left: auto; font-size: 15px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---------- adicionar rápido (estilo Lembretes) ---------- */
+.card > .stack > .add-form.quick { display: flex; align-items: center; flex-wrap: nowrap; gap: 14px; margin: 0; padding: 3px 16px; min-height: 52px; }
+.plus { flex: none; position: relative; width: 26px; height: 26px; border-radius: 50%; background: var(--fill); }
+.plus::before, .plus::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 2px; border-radius: 2px; background: var(--muted); transform: translate(-50%, -50%); }
+.plus::after { transform: translate(-50%, -50%) rotate(90deg); }
+.add-form.quick input[type=text] { flex: 1; min-width: 0; background: none; padding: 0; border-radius: 0; }
+.add-form.quick input::placeholder { color: var(--muted); }
+.add-go {
+  flex: none; border: 0; border-radius: 99px; min-height: 34px; padding: 0 14px; background: var(--btn); color: var(--on-primary);
+  font-size: 15px; font-weight: 600; transition: opacity .2s, transform .3s cubic-bezier(.3, .7, .3, 1.3);
+}
+.add-form.quick input:placeholder-shown + .add-go { opacity: 0; transform: scale(.6); pointer-events: none; }
 
 /* ---------- barras e anéis ---------- */
 .bar { display: block; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
@@ -249,24 +265,17 @@ button.check:active { background: var(--fill); }
 .mini { display: block; margin-top: 6px; height: 5px; }
 .prog { display: grid; grid-template-columns: 84px 1fr 46px; align-items: center; gap: 10px; font-size: 15px; margin: 8px 0; }
 .prog .v { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.rings { flex: none; display: block; }
-.rings circle { fill: none; stroke-linecap: round; }
-.rings .arc { transition: stroke-dasharray .6s cubic-bezier(.2, .8, .2, 1); }
-.hero { display: flex; align-items: center; gap: 18px; padding: 18px 0 6px; }
-.hero .rings { width: 124px; height: 124px; }
-.hero-k { font-size: 15px; font-weight: 600; color: var(--muted); }
-.big { font-size: 44px; font-weight: 700; letter-spacing: -.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.rings { flex: none; display: block; overflow: visible; }
+.hero { display: flex; align-items: center; gap: 22px; padding: 20px 2px 6px; }
+.hero .rings { width: 132px; height: 132px; }
+.hero-k { font-size: 15px; font-weight: 500; color: var(--muted); }
+.big { font-size: 52px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; display: block; }
 .hero .sub { font-size: 15px; color: var(--muted); margin-top: 2px; }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-.stat { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
-.stat .k { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.stat .k i { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
-.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; margin: 2px 0 6px; }
-.stat.na b { color: var(--muted); }
-.badge-today {
-  display: inline-block; background: var(--today); color: #fff; border-radius: 99px; padding: 2px 8px;
-  font-size: 11px; font-weight: 700; letter-spacing: .03em; margin-left: 6px; vertical-align: 2px;
-}
+.legend4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 14px; padding-top: 12px; border-top: .5px solid var(--sep); text-align: center; }
+.legend4 .lg > :first-child { display: block; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.legend4 .lg.na > :first-child { font-size: 15px; line-height: 1.65; color: var(--muted); }
+.legend4 .lg > :last-child { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.legend4 i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 
 /* ---------- faixa da semana (estilo Fitness/Calendário) ---------- */
 .chips { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin: 0 -4px 16px; }
@@ -276,10 +285,12 @@ button.check:active { background: var(--fill); }
 }
 .chip:active { background: var(--fill); }
 .chip .wd { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
-.chip .rings { width: 34px; height: 34px; }
+.chip .nr { position: relative; width: 40px; height: 40px; display: grid; place-items: center; transition: transform .2s cubic-bezier(.3, .7, .3, 1.4); }
+.chip:active .nr { transform: scale(.9); }
+.chip .nr .ring1 { position: absolute; inset: 0; }
 .chip .n {
-  font-size: 15px; font-weight: 600; width: 30px; height: 30px; border-radius: 50%;
-  display: grid; place-items: center; font-variant-numeric: tabular-nums; transition: background .2s;
+  font-size: 15px; font-weight: 600; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; font-variant-numeric: tabular-nums; transition: background-color .25s, color .25s;
 }
 .chip.today .wd, .chip.today .n { color: var(--today); }
 .chip[aria-pressed="true"] .n { background: var(--text); color: var(--bg); }
@@ -294,15 +305,23 @@ button.check:active { background: var(--fill); }
 .daycard::after { left: 70px; }
 .daycard:active { background: var(--fill); }
 .daycard .rings { width: 44px; height: 44px; }
+.daycard .dring { flex: none; width: 34px; height: 34px; margin: 0 4px; }
+.goals-d { margin-bottom: 22px; }
+.goals-d > summary { font-size: 17px; }
+.goals-d > summary .ring1 { width: 26px; height: 26px; flex: none; }
+details.goals-d > summary::after { margin-left: 10px; }
+.goals-d .inner > .stack { margin: 0 -16px; }
+.goals-d .inner > .goal-area:first-child { margin-top: 8px; }
+details.opening > .inner { animation: fadein .4s cubic-bezier(.2, .8, .2, 1); }
 .daycard .info { flex: 1; min-width: 0; display: block; }
 .daycard .head { display: flex; align-items: baseline; gap: 6px; }
 .daycard .head b { font-weight: 600; }
 .daycard.today .head b { color: var(--today); }
-.daycard .meta { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.daycard .meta { display: block; font-size: 14px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .daycard .pct { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
 .chev { flex: none; width: 9px; height: 9px; border-right: 2.5px solid var(--ring-off); border-bottom: 2.5px solid var(--ring-off); transform: rotate(-45deg); margin: 0 4px 0 2px; }
-.goal-area { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .02em; margin: 14px 0 2px; }
-.card > .goal-area:first-of-type { margin-top: 2px; }
+.goal-area { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .02em; margin: 16px 0 2px; }
+.goal-area i { width: 8px; height: 8px; border-radius: 50%; }
 
 /* ---------- gráficos ---------- */
 .donut { margin: 0; text-align: center; }
@@ -441,13 +460,71 @@ dialog .actions .btn { min-height: 52px; border-radius: 14px; }
 dialog .actions .primary { order: -1; }
 
 /* ---------- animações ---------- */
-@keyframes tick { 0% { transform: scale(.6); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
-@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(.97); } 100% { transform: scale(1); } }
-.pop .box { animation: tick .35s cubic-bezier(.3, .7, .3, 1.3); }
-.counter-row.pop output, .pop.counter-row .bottles { animation: pop .3s ease; }
-@keyframes fadein { from { opacity: 0; transform: translateY(6px); } }
-main.anim > * { animation: fadein .28s ease both; }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* check: o anel se completa → preenche → ✓ é desenhado → quiquezinho + onda */
+@keyframes ringDraw { from { stroke-dashoffset: 75.4; } to { stroke-dashoffset: 0; } }
+@keyframes fillIn { from { fill: transparent; stroke: var(--ring-off); } }
+@keyframes tickDraw { from { stroke-dashoffset: 17; } }
+@keyframes boing { 40% { transform: scale(1.2); } 70% { transform: scale(.95); } }
+@keyframes ripple { from { transform: scale(1); opacity: .45; } to { transform: scale(2.2); opacity: 0; } }
+@keyframes flash { from { background-color: color-mix(in srgb, var(--accent, var(--ok)) 13%, transparent); } }
+@keyframes dim { from { color: var(--text); } }
+@keyframes unfill { from { fill: var(--accent, var(--ok)); stroke: var(--accent, var(--ok)); } }
+@keyframes shrink { from { transform: scale(.8); } }
+.check.pop { animation: flash 1s ease-out; }
+.check.pop .box .p { animation: ringDraw .36s cubic-bezier(.45, 0, .2, 1) both; }
+.check.pop .box .o { animation: fillIn .2s .32s ease-out backwards; }
+.check.pop .box .m { animation: tickDraw .28s .44s cubic-bezier(.3, .6, .3, 1) backwards; }
+.check.pop .box > svg { animation: boing .5s .34s cubic-bezier(.3, .7, .3, 1.2); }
+.check.pop .box::after, .counter-row.reach .box::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent, var(--ok)); opacity: 0;
+  animation: ripple .6s .36s ease-out;
+}
+.counter-row.reach .box::after { animation-delay: .55s; }
+.check.pop > .lbl { animation: dim .5s .3s ease backwards; }
+.check.unpop .box .o { animation: unfill .3s ease; }
+.check.unpop .box > svg { animation: shrink .35s cubic-bezier(.3, .7, .3, 1.4); }
+.counter-row.reach { animation: flash 1.1s .4s ease-out backwards; }
+
+/* anel fechou 100% → pulinho e ✓ aparece */
+@keyframes burst { 40% { transform: scale(1.2); } 75% { transform: scale(.96); } }
+@keyframes burstS { 40% { transform: scale(1.06); } 75% { transform: scale(.99); } }
+@keyframes tickIn { from { stroke-dashoffset: 56; } }
+.ring1.burst { animation: burst .55s .55s cubic-bezier(.3, .7, .3, 1.2); }
+.rings.burst { animation: burstS .6s .6s cubic-bezier(.3, .7, .3, 1.2); }
+.ring1.full.burst .tick { animation: tickIn .35s .7s ease-out backwards; }
+main.anim .ring1.full .tick { animation: tickIn .35s 1.05s ease-out backwards; }
+
+/* troca de aba: tudo entra suave, um bloco depois do outro */
+@keyframes fadein { from { opacity: 0; transform: translateY(12px); } }
+main.anim > * { animation: fadein .5s cubic-bezier(.2, .8, .2, 1) both; }
+main.anim > :nth-child(2) { animation-delay: .05s; } main.anim > :nth-child(3) { animation-delay: .1s; }
+main.anim > :nth-child(4) { animation-delay: .15s; } main.anim > :nth-child(5) { animation-delay: .2s; }
+main.anim > :nth-child(6) { animation-delay: .25s; } main.anim > :nth-child(n+7) { animation-delay: .3s; }
+/* troca de dia: desliza pro lado certo */
+@keyframes slideL { from { opacity: 0; transform: translateX(28px); } }
+@keyframes slideR { from { opacity: 0; transform: translateX(-28px); } }
+main.slide-l > :not(.chips) { animation: slideL .42s cubic-bezier(.2, .8, .2, 1) both; }
+main.slide-r > :not(.chips) { animation: slideR .42s cubic-bezier(.2, .8, .2, 1) both; }
+main.slide-l > :nth-child(3), main.slide-r > :nth-child(3) { animation-delay: .04s; }
+main.slide-l > :nth-child(n+4), main.slide-r > :nth-child(n+4) { animation-delay: .08s; }
+/* gráficos crescem ao abrir */
+@keyframes growY { from { transform: scaleY(0); } }
+@keyframes draw { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+@keyframes donutIn { from { stroke-dasharray: 0 999; } }
+main.anim .chart rect { transform-box: fill-box; transform-origin: bottom; animation: growY .8s .15s cubic-bezier(.2, .8, .2, 1) both; }
+main.anim .chart polyline { stroke-dasharray: 1000; animation: draw 1.4s .2s ease-out both; }
+main.anim .donut .arc { animation: donutIn 1s .15s cubic-bezier(.2, .8, .2, 1) both; }
+/* folha e fundo */
+@keyframes sheetOut { to { transform: translateY(100%); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+dialog[open]::backdrop { animation: fade .3s ease; }
+dialog.closing { animation: sheetOut .23s cubic-bezier(.5, 0, .9, .6) forwards; }
+dialog.closing::backdrop { animation: fadeOut .23s ease forwards; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .45s; }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.confetti i { position: absolute; width: 8px; height: 12px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after, ::backdrop { animation: none !important; transition: none !important; } }
 @media (min-width: 700px) { .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; } .grid2 > .card { margin: 0 0 16px; } }
 </style>
 </head>
@@ -773,9 +850,10 @@ function defaultDay() {
   return t > weekEnd() ? weekEnd() : state.week.start;
 }
 /* ============================ Componentes ============================ */
-function bar(p, color = 'var(--primary)', label = '', cls = '') {
-  const v = Math.round((p || 0) * 100);
-  return `<span class="bar ${cls}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}" aria-label="${esc(label)}"><span style="width:${v}%;background:${color}"></span></span>`;
+function bar(p, color = 'var(--primary)', label = '', cls = '', key = '') {
+  const v = Math.round(clamp01(p) * 100);
+  const rk = key ? ` data-rk="${key}" data-t="bar" data-v="${v / 100}"` : '';
+  return `<span class="bar ${cls}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}" aria-label="${esc(label)}"><span${rk} style="width:${v}%;background:${color}"></span></span>`;
 }
 function progRow(label, p, color) {
   return `<div class="prog"><span>${esc(label)}</span>${bar(p, color, label)}<span class="v">${pctTxt(p)}</span></div>`;
@@ -788,29 +866,48 @@ function donut(p, color, label) {
     <text x="50" y="57" text-anchor="middle" class="donut-txt">${pctTxt(p)}</text></svg>
     <figcaption>${esc(label)}</figcaption></figure>`;
 }
+// Bolinha de marcar: o anel .p "se completa" e depois o ✓ é desenhado (ver .pop no CSS).
+const BOX = `<span class="box" aria-hidden="true"><svg viewBox="0 0 28 28"><circle class="o" cx="14" cy="14" r="12"/><circle class="p" cx="14" cy="14" r="12" transform="rotate(-90 14 14)"/><path class="m" d="M8.6 14.4l3.6 3.6 7.2-7.6"/></svg></span>`;
 function checkBtn({ fk, act, data = '', label, sub = '', done, extra = '' }) {
   return `<button type="button" class="check ${done ? 'done' : ''}" data-act="${act}" ${data} data-fk="${esc(fk)}" aria-pressed="${done ? 'true' : 'false'}">
-    <span class="box" aria-hidden="true">✓</span><span class="lbl">${label}${sub ? `<small>${sub}</small>` : ''}</span>${extra}</button>`;
+    ${BOX}<span class="lbl">${label}${sub ? `<small>${sub}</small>` : ''}</span>${extra}</button>`;
 }
-const streakBadge = n => n > 0 ? `<span class="streak" aria-label="Sequência de ${n} dia${n > 1 ? 's' : ''}">🔥 ${n}</span>` : '';
+const streakBadge = n => n > 1 ? `<span class="streak" aria-label="Sequência de ${n} dias">🔥${n}</span>` : '';
+
+// Arco de progresso. Com `key`, o render() anima do valor anterior até o novo (rodinha completando).
+function arcC(r, p, color, sw, key) {
+  const c = 2 * Math.PI * r, v = p == null ? 0 : clamp01(p);
+  const rk = key ? ` data-rk="${key}" data-v="${v.toFixed(4)}" data-c="${c.toFixed(2)}"` : '';
+  return `<circle class="arc${v < .004 ? ' z' : ''}" cx="50" cy="50" r="${r.toFixed(2)}" transform="rotate(-90 50 50)"${rk} style="stroke:${color};stroke-width:${sw};stroke-dasharray:${c.toFixed(2)}px ${c.toFixed(2)}px;stroke-dashoffset:${(c * (1 - v)).toFixed(2)}px"/>`;
+}
+const trackC = (r, p, color, sw) => `<circle class="trk" cx="50" cy="50" r="${r.toFixed(2)}" style="stroke:${color};stroke-width:${sw};opacity:${p == null ? .08 : .2}"/>`;
 
 // Anéis concêntricos estilo Atividade (Apple Fitness): um anel por área.
-function rings(areaPcts, { sw = 9, gap = 1.6, label = '' } = {}) {
+function rings(areaPcts, { sw = 9, gap = 1.6, label = '', key = '' } = {}) {
   let r = 50 - sw / 2 - .5, g = '';
   AREAS.forEach(a => {
-    const p = areaPcts[a.id], c = 2 * Math.PI * r, v = p == null ? 0 : clamp01(p);
-    g += `<circle cx="50" cy="50" r="${r.toFixed(2)}" style="stroke:${a.color};stroke-width:${sw};opacity:${p == null ? .08 : .2}"/>`;
-    if (v > .004) g += `<circle class="arc" cx="50" cy="50" r="${r.toFixed(2)}" style="stroke:${a.color};stroke-width:${sw}" stroke-dasharray="${(c * v).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 50 50)"/>`;
+    const p = areaPcts[a.id];
+    g += trackC(r, p, a.color, sw) + arcC(r, p, a.color, sw, key && `${key}-${a.id}`);
     r -= sw + gap;
   });
   const desc = label ? `${label}: ` + AREAS.map(a => `${a.label} ${pctTxt(areaPcts[a.id])}`).join(', ') : '';
   return `<svg class="rings" viewBox="0 0 100 100" ${desc ? `role="img" aria-label="${esc(desc)}"` : 'aria-hidden="true"'}>${g}</svg>`;
 }
-function statsGrid(areaPcts, notes = {}) {
-  return `<div class="stats">${AREAS.map(a => {
-    const p = areaPcts[a.id];
-    return `<div class="stat area-${a.id} ${p == null ? 'na' : ''}"><span class="k"><i></i>${a.label}</span><b>${p == null ? (notes[a.id] || '—') : pctTxt(p)}</b>${bar(p, a.color, a.label)}</div>`;
+// Anel único (cabeçalho dos cards, contadores e faixa da semana). Com `tick`, mostra ✓ ao completar.
+function ring1(p, color, key, { sw = 13, tick = false, cls = '' } = {}) {
+  const r = 50 - sw / 2 - .5, full = p != null && p >= 1;
+  return `<svg class="ring1 ${cls}${full ? ' full' : ''}" viewBox="0 0 100 100" aria-hidden="true">${trackC(r, p, color, sw)}${arcC(r, p, color, sw, key)}${tick ? `<path class="tick" d="M32 52l12 12 24-26" style="stroke:${color}"/>` : ''}</svg>`;
+}
+const numEl = (p, key, cls = '') => `<span class="${cls}"${p == null ? '' : ` data-rk="${key}" data-t="num" data-v="${p.toFixed(4)}"`}>${pctTxt(p)}</span>`;
+function legend(ap, k, notes = {}) {
+  return `<div class="legend4">${AREAS.map(a => {
+    const p = ap[a.id];
+    return `<div class="lg${p == null ? ' na' : ''}">${p == null ? `<b>${notes[a.id] || '—'}</b>` : numEl(p, `${k}-n-${a.id}`)}<span><i style="background:${a.color}"></i>${a.label}</span></div>`;
   }).join('')}</div>`;
+}
+function areaH(d, id, title, extra = '') {
+  const a = dayAreas(d)[id];
+  return `<h3>${ring1(a.pct, AREA[id].color, `d-card-${id}`, { tick: true })}<span>${title}</span>${extra}</h3>`;
 }
 const cardH = (icon, title, extra = '') => `<h3><span class="tile" aria-hidden="true">${icon}</span><span>${title}</span>${extra}</h3>`;
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -822,21 +919,19 @@ function renderDay() {
   const d = ui.day, wd = weekdayIdx(d), day = state.week.days[d], t = todayISO();
   const areas = dayAreas(d), pct = dayPct(areas), sMap = streakMap();
   const chips = weekDates().map(x => {
-    const xa = dayAreas(x), p = dayPct(xa), wdx = weekdayIdx(x);
+    const p = dayPct(dayAreas(x)), wdx = weekdayIdx(x);
     return `<button type="button" class="chip ${x === t ? 'today' : ''}" data-act="select-day" data-date="${x}" aria-pressed="${x === d}" aria-label="${WD_LONG[wdx]} ${fmtBR(x)}, ${pctTxt(p)}">
-      <span class="wd">${WD_SHORT[wdx][0]}</span>${rings(areaPctMap(xa), { sw: 11, gap: 2 })}<span class="n">${parseDate(x).getDate()}</span></button>`;
+      <span class="wd">${WD_SHORT[wdx][0]}</span><span class="nr">${ring1(p, 'var(--ok)', `chip-${x}`, { sw: 9 })}<span class="n">${parseDate(x).getDate()}</span></span></button>`;
   }).join('');
 
   const ap = areaPctMap(areas);
-  const status = pct == null ? 'Dia livre' : pct >= 1 ? 'Dia completo! 🎉' : pct >= .75 ? 'Quase lá, bora! 💪' : pct > 0 ? 'Em andamento' : 'Tudo pronto pra começar';
+  const status = isRest(wd) ? 'Descanso total 🛌' : pct == null ? 'Dia livre' : pct >= 1 ? 'Dia completo! 🎉' : pct >= .75 ? 'Quase lá 💪' : pct > 0 ? 'Bom ritmo, segue' : 'Bora começar?';
   let html = `<div class="chips" role="group" aria-label="Escolher dia">${chips}</div>`;
-  html += `<section class="card"><div class="hero">${rings(ap, { label: 'Progresso por área' })}
-      <div class="grow"><div class="hero-k">${d === t ? 'Hoje' : WD_LONG[wd].replace('-feira', '')}, ${fmtLong(d)}</div>
-        <div class="big donut-txt">${pctTxt(pct)}</div>
+  html += `<section class="card hero-card"><div class="hero">${rings(ap, { label: 'Progresso por área', key: 'd-hero', sw: 8.5, gap: 2.2 })}
+      <div class="grow"><div class="hero-k">${fmtLong(d)}</div>${numEl(pct, 'd-pct', 'big donut-txt')}
         <div class="sub">${status}</div></div></div>
-      ${statsGrid(ap, { trabalho: 'Folga', saude: 'Descanso', estudos: 'Livre' })}</section>`;
+      ${legend(ap, 'd', { trabalho: 'Folga', saude: 'Descanso', estudos: 'Livre' })}</section>`;
 
-  if (isRest(wd)) html += `<div class="banner rest">🛌 <b>Descanso total.</b> Hoje não tem treino nem meta de estudo — recupere o corpo e a mente.</div>`;
   if (day.events.length) html += `<div class="banner">📅 <b>Compromissos e prazos</b><ul>${day.events.map(e => `<li>${esc(e.text)}</li>`).join('')}</ul></div>`;
 
   html += `<div class="grid2">${cardWork(d, wd, day)}${cardHealth(d, wd, day)}</div>`;
@@ -851,142 +946,127 @@ function editToggle(key, label) {
 
 function cardWork(d, wd, day) {
   const key = 'work:' + d, editing = ui.editing[key];
-  let h = `<section class="card area-trabalho">${cardH('💼', 'Trabalho', editToggle(key, 'demandas'))}<div class="stack">`;
-  if (isWork(wd)) h += checkBtn({ fk: 'ontime-' + d, act: 'toggle-ontime', label: `Cheguei no horário (${esc(state.settings.workStartTime)})`, done: day.onTime });
+  let h = `<section class="card area-trabalho">${areaH(d, 'trabalho', 'Trabalho', editToggle(key, 'demandas'))}<div class="stack">`;
+  if (isWork(wd)) h += checkBtn({ fk: 'ontime-' + d, act: 'toggle-ontime', label: `Cheguei no horário`, sub: esc(state.settings.workStartTime), done: day.onTime });
   if (editing) {
     h += `<div class="sub-h">Demandas do dia</div>${listEditor('demands:' + d, day.demands)}`;
     h += `<div class="sub-h">Compromissos, provas e prazos</div>${listEditor('events:' + d, day.events)}`;
   } else {
-    if (!day.demands.length) h += `<p class="muted small">${isWork(wd) ? 'Nenhuma demanda listada para hoje.' : 'Sem expediente hoje.'}</p>`;
+    if (!day.demands.length && !isWork(wd)) h += `<p class="muted small">Sem expediente hoje.</p>`;
     day.demands.forEach(x => {
       h += checkBtn({ fk: 'dem-' + x.id, act: 'toggle-demand', data: `data-date="${d}" data-id="${esc(x.id)}"`, label: esc(x.text), done: x.done, sub: x.carried ? '↪ da semana anterior' : '' });
     });
-    h += `<form class="add-form" data-add="demands:${d}"><label class="sr-only" for="qd-${d}">Nova demanda</label>
-      <input type="text" id="qd-${d}" name="text" placeholder="+ Adicionar demanda" autocomplete="off" required>
-      <button class="btn" type="submit" aria-label="Adicionar demanda">Adicionar</button></form>`;
+    h += `<form class="add-form quick" data-add="demands:${d}"><span class="plus" aria-hidden="true"></span><label class="sr-only" for="qd-${d}">Nova demanda</label>
+      <input type="text" id="qd-${d}" name="text" placeholder="Nova demanda" autocomplete="off" enterkeyhint="done" required>
+      <button class="add-go" type="submit" aria-label="Adicionar demanda">Adicionar</button></form>`;
   }
   return h + '</div></section>';
 }
 
 function cardHealth(d, wd, day) {
   const key = 'health:' + d, editing = ui.editing[key];
-  let h = `<section class="card area-saude">${cardH('💪', 'Saúde', editToggle(key, 'treinos do dia'))}<div class="stack">`;
+  let h = `<section class="card area-saude">${areaH(d, 'saude', 'Saúde', editToggle(key, 'treinos do dia'))}<div class="stack">`;
   if (editing) {
     h += `<p class="muted small">Mudanças aqui valem só para ${WD_LONG[wd].toLowerCase()} ${fmtBR(d)}. Para mudar o padrão, use a aba Editar.</p>`;
     h += listEditor('override:' + d, fixedFor(d));
     if (day.fixedOverride) h += `<button type="button" class="btn sm" data-act="reset-override" data-date="${d}">Voltar ao treino padrão</button>`;
   } else if (isRest(wd)) {
-    h += `<p>🛌 Domingo é <b>descanso total</b>. Sem treino hoje.</p>`;
+    h += `<p class="rest-msg">🛌 <b>Descanso total.</b> <span class="muted">Sem treino hoje, só recuperar.</span></p>`;
   } else {
     const fx = fixedFor(d);
     if (!fx.length) h += `<p class="muted small">Nenhuma atividade fixa hoje.</p>`;
     fx.forEach(f => {
-      h += checkBtn({ fk: `fx-${d}-${f.id}`, act: 'toggle-fixed', data: `data-date="${d}" data-id="${esc(f.id)}"`, label: `${f.icon ? f.icon + ' ' : ''}${esc(f.text)}`, done: !!day.fixedDone[f.id] });
+      h += checkBtn({ fk: `fx-${d}-${f.id}`, act: 'toggle-fixed', data: `data-date="${d}" data-id="${esc(f.id)}"`, label: `${f.icon ? f.icon + ' ' : ''}${esc(f.text)}`, done: !!day.fixedDone[f.id], sub: day.fixedOverride && f === fx[0] ? 'Treino diferente do padrão' : '' });
     });
-    if (day.fixedOverride) h += `<p class="muted small">Treino diferente do padrão neste dia.</p>`;
   }
   return h + '</div></section>';
 }
 
-function counterRow({ fk, act, data, label, value, goal, unit, done, step, extra = '' }) {
+function counterRow({ fk, act, data, label, value, goal, unit, done, step, p, color, key, extra = '' }) {
   return `<div class="counter-row ${done ? 'done' : ''}" data-fk="${fk}-row">
+    <span class="box" aria-hidden="true">${ring1(p, color, key, { sw: 14, tick: true })}</span>
     <div class="lbl">${label}<small>${num(value)} / ${num(goal)} ${unit}</small>${extra}</div>
     <div class="counter">
       <button type="button" data-act="${act}" ${data} data-delta="-${step}" data-fk="${fk}-minus" aria-label="Diminuir ${esc(stripTags(label))}">−</button>
-      <output aria-live="polite">${num(value)}</output>
+      <output class="sr-only" aria-live="polite">${num(value)}</output>
       <button type="button" data-act="${act}" ${data} data-delta="${step}" data-fk="${fk}-plus" aria-label="Aumentar ${esc(stripTags(label))}">+</button>
     </div></div>`;
 }
 const stripTags = s => String(s).replace(/<[^>]*>/g, '');
 
 function cardStudy(d, wd, day) {
-  let h = `<section class="card area-estudos">${cardH('📚', 'Estudos', `<span class="tag" style="margin-left:auto">${num(studyTotal(day))} / ${num(studyGoal())} h</span>`)}<div class="stack">`;
-  if (!isStudy(wd)) {
-    h += `<p>Dia livre de estudo. Se quiser, registre mesmo assim:</p>`;
-  }
+  const free = !isStudy(wd);
+  let h = `<section class="card area-estudos">${areaH(d, 'estudos', 'Estudos', `<span class="cnt">${free ? 'dia livre' : `${num(studyTotal(day))} / ${num(studyGoal())} h`}</span>`)}<div class="stack">`;
   const step = Number(state.settings.studyStep) || 0.5;
   state.settings.studySplit.forEach(s => {
-    const v = Number(day.study[s.id]) || 0;
-    h += counterRow({ fk: `st-${d}-${s.id}`, act: 'study', data: `data-date="${d}" data-id="${esc(s.id)}"`, label: esc(s.label), value: v, goal: s.hours, unit: 'h', done: isStudy(wd) && v >= s.hours, step });
+    const v = Number(day.study[s.id]) || 0, g = Number(s.hours) || 0;
+    h += counterRow({
+      fk: `st-${d}-${s.id}`, act: 'study', data: `data-date="${d}" data-id="${esc(s.id)}"`, label: esc(s.label), value: v, goal: s.hours, unit: 'h',
+      done: !free && v >= g, step, p: free ? (v > 0 ? 1 : null) : g ? v / g : null, color: 'var(--c-estudos)', key: `d-st-${s.id}`
+    });
   });
-  const tot = studyTotal(day), g = studyGoal();
-  h += `<div class="small total"><div class="row"><span class="grow muted">Total do dia</span><b>${num(tot)} / ${num(g)} h</b></div>${bar(g ? tot / g : 0, 'var(--c-estudos)', 'Horas de estudo do dia', 'mini')}</div>`;
   return h + '</div></section>';
 }
 
 function cardHabits(d, wd, day, sMap) {
-  let h = `<section class="card area-habitos">${cardH('✅', 'Hábitos')}<div class="stack">`;
-  const enabled = state.habits.filter(x => x.enabled);
+  let h = `<section class="card area-habitos">${areaH(d, 'habitos', 'Hábitos')}<div class="stack">`;
+  const enabled = state.habits.filter(x => x.enabled), na = [];
   if (!enabled.length) h += `<p class="muted small">Nenhum hábito ativo. Ative em Editar → Hábitos.</p>`;
   enabled.forEach(hb => {
     const applies = habitApplies(hb, wd), st = streakBadge(streak(hb.id, sMap));
     const label = `${hb.icon ? hb.icon + ' ' : ''}${esc(hb.label)}`;
-    if (!applies) {
-      h += `<div class="check na" aria-disabled="true"><span class="box" aria-hidden="true">–</span><span class="lbl">${label}<small>Não se aplica hoje (${hb.when === 'training' ? 'descanso' : 'dia livre'})</small></span>${st}</div>`;
-      return;
-    }
+    if (!applies) { na.push(esc(hb.label)); return; }
     if (hb.type === 'water') {
       const v = day.habits[hb.id] || 0, goal = bottlesGoal(), L = Number(state.settings.bottleLiters) || 1;
-      const icons = Array.from({ length: Math.max(goal, v) }, (_, i) => `<span class="${i < v ? 'on' : ''}"></span>`).join('');
       h += counterRow({
         fk: `w-${d}`, act: 'water', data: `data-date="${d}" data-id="${esc(hb.id)}"`, label: `${label} ${st}`,
         value: v * L, goal: goal * L, unit: L === 1 ? 'L' : `L · ${v}/${goal} de ${num(L)} L`, done: v >= goal, step: 1,
-        extra: `<div class="bottles" aria-hidden="true">${icons}</div>`
+        p: goal ? v / goal : null, color: 'var(--water)', key: 'd-water'
       });
     } else if (hb.type === 'study') {
-      const tot = studyTotal(day), g = studyGoal(), done = tot >= g;
-      h += `<div class="check ${done ? 'done' : ''}" role="group" aria-label="${esc(hb.label)}: ${num(tot)} de ${num(g)} horas">
-        <span class="box" aria-hidden="true">✓</span><span class="lbl">${label}<small>${num(tot)} / ${num(g)} h · conta pelo card Estudos</small>${bar(g ? tot / g : 0, 'var(--c-estudos)', 'Estudo', 'mini')}</span>${st}</div>`;
+      return; // aparece no card Estudos (o hábito fecha sozinho ao bater as horas)
     } else {
-      const sub = hb.type === 'wake' ? `Alvo: até ${esc(state.settings.wakeTarget)}` : '';
+      const sub = hb.type === 'wake' ? `até ${esc(state.settings.wakeTarget)}` : '';
       h += checkBtn({ fk: `hb-${d}-${hb.id}`, act: 'toggle-habit', data: `data-date="${d}" data-id="${esc(hb.id)}"`, label, sub, done: !!day.habits[hb.id], extra: st });
     }
   });
+  if (na.length) h += `<p class="muted small na-line">Não se aplica hoje: ${na.join(', ')}</p>`;
   return h + '</div></section>';
 }
 
 /* ============================== Visão da semana ============================== */
 function renderWeek() {
   const st = weekStats(), t = todayISO(), gDone = st.goals.filter(g => g.done).length;
-  let h = `<section class="card"><div class="hero">${rings(st.areas, { label: 'Semana por área' })}
-    <div class="grow"><div class="hero-k">Semana ${fmtBR(state.week.start)} – ${fmtBR(weekEnd())}</div>
-    <div class="big donut-txt">${pctTxt(st.overall)}</div><div class="sub">🎯 ${gDone} de ${st.goals.length} metas</div></div></div>
-    ${statsGrid(st.areas)}
-    <div class="prog"><span class="muted">Metas</span>${bar(st.goalsPct, 'var(--primary)', 'Metas da semana')}<span class="v">${pctTxt(st.goalsPct)}</span></div></section>`;
+  let h = `<section class="card hero-card"><div class="hero">${rings(st.areas, { label: 'Semana por área', key: 'w-hero', sw: 8.5, gap: 2.2 })}
+    <div class="grow"><div class="hero-k">Semana toda</div>${numEl(st.overall, 'w-pct', 'big donut-txt')}<div class="sub">${gDone} de ${st.goals.length} metas</div></div></div>
+    ${legend(st.areas, 'w')}</section>`;
 
-  h += `<section class="card">${cardH('🎯', 'Metas da semana')}`;
+  h += `<details class="sec goals-d" data-sec="w-goals" ${ui.open.has('w-goals') ? 'open' : ''}><summary>${ring1(st.goalsPct, 'var(--primary)', 'w-goals', { tick: true })}<span>Metas da semana</span><span class="cnt">${gDone}/${st.goals.length}</span></summary><div class="inner">`;
   AREAS.forEach(a => {
     const gs = st.goals.filter(g => g.area === a.id);
     if (!gs.length) return;
-    h += `<div class="goal-area">${a.label}</div><div class="stack area-${a.id}">`;
+    h += `<div class="goal-area"><i style="background:${a.color}"></i>${a.label}</div><div class="stack area-${a.id}">`;
     gs.forEach(g => {
       const sub = [g.m ? `${num(g.m.v)}/${num(g.m.t)} ${g.m.unit}` : '', g.carried ? '↪ da semana anterior' : ''].filter(Boolean).join(' · ');
-      const mini = g.m && g.m.t ? bar(g.m.v / g.m.t, a.color, g.text, 'mini') : '';
+      const mini = g.m && g.m.t ? bar(g.m.v / g.m.t, a.color, g.text, 'mini', 'w-goal-' + g.id) : '';
       h += checkBtn({ fk: 'goal-' + g.id, act: 'toggle-goal', data: `data-id="${esc(g.id)}"`, label: esc(g.text) + mini, sub, done: g.done });
     });
     h += '</div>';
   });
-  h += `</section>`;
+  h += `</div></details>`;
 
   h += `<h3 class="sec-h">Dias</h3><div class="daylist">`;
   st.per.forEach(p => {
-    const d = p.date, wd = weekdayIdx(d), day = state.week.days[d], fx = fixedFor(d);
-    const meta = [];
-    if (isRest(wd)) meta.push('🛌 Descanso');
-    else if (fx.length) meta.push(`💪 ${fx.filter(f => day.fixedDone[f.id]).length}/${fx.length}`);
-    if (day.demands.length) meta.push(`💼 ${day.demands.filter(x => x.done).length}/${day.demands.length}`);
-    if (isStudy(wd)) meta.push(`📚 ${num(studyTotal(day))}/${num(studyGoal())} h`);
-    meta.push(`✅ ${p.areas.habitos.done}/${p.areas.habitos.total}`);
-    if (day.events.length) meta.push(`📅 ${day.events.length}`);
+    const d = p.date, wd = weekdayIdx(d), fx = fixedFor(d);
+    const meta = isRest(wd) ? 'Descanso' : fx.map(f => f.text).join(' + ') || '—';
     h += `<button type="button" class="daycard ${d === t ? 'today' : ''}" data-act="open-day" data-date="${d}" aria-label="Abrir ${WD_LONG[wd]} ${fmtBR(d)}, ${pctTxt(p.pct)}">
-      ${rings(areaPctMap(p.areas), { sw: 10, gap: 2 })}
-      <span class="info"><span class="head"><b>${WD_LONG[wd]}</b><span class="muted small">${fmtBR(d)}</span>${d === t ? '<span class="badge-today">HOJE</span>' : ''}</span>
-      <span class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span></span>
+      <span class="dring">${ring1(p.pct, 'var(--ok)', 'w-day-' + d, { tick: true })}</span>
+      <span class="info"><span class="head"><b>${WD_LONG[wd].replace('-feira', '')}</b><span class="muted small">${fmtBR(d)}</span></span>
+      <span class="meta">${esc(meta)}</span></span>
       <span class="pct">${pctTxt(p.pct)}</span><span class="chev" aria-hidden="true"></span></button>`;
   });
   h += `</div>`;
-  h += `<button type="button" class="btn primary block" data-act="new-week">Começar nova semana</button>
-    <p class="muted small" style="text-align:center;margin:10px 16px 0">Arquiva esta semana no histórico e começa a próxima com tudo desmarcado.</p>`;
+  h += `<button type="button" class="btn primary block" data-act="new-week">Começar nova semana</button>`;
   return h;
 }
 /* ============================== Gráficos (SVG) ============================== */
@@ -1191,14 +1271,80 @@ const THEME_UI = {
 };
 
 // Vibração curta. No iPhone (sem navigator.vibrate) usa o truque do <input switch> do iOS 18+.
-function haptic() {
+function haptic(strong) {
   try {
-    if (navigator.vibrate) { navigator.vibrate(12); return; }
+    if (navigator.vibrate) { navigator.vibrate(strong ? [14, 70, 24] : 12); return; }
     if (!/iP(hone|ad|od)/.test(navigator.userAgent)) return;
-    const l = document.createElement('label'), i = document.createElement('input');
-    i.type = 'checkbox'; i.setAttribute('switch', ''); l.setAttribute('aria-hidden', 'true'); l.style.display = 'none';
-    l.appendChild(i); document.head.appendChild(l); l.click(); l.remove();
+    const tap = () => {
+      const l = document.createElement('label'), i = document.createElement('input');
+      i.type = 'checkbox'; i.setAttribute('switch', ''); l.setAttribute('aria-hidden', 'true'); l.style.display = 'none';
+      l.appendChild(i); document.head.appendChild(l); l.click(); l.remove();
+    };
+    tap(); if (strong) setTimeout(tap, 110);
   } catch (e) { /* sem vibração */ }
+}
+
+/* ---------- animações: anéis, barras e números saem do valor antigo até o novo ---------- */
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const EASE = 'cubic-bezier(.22,.9,.24,1)';
+function snapshot() {
+  const m = new Map();
+  app.querySelectorAll('[data-rk]').forEach(el => m.set(el.dataset.rk, Number(el.dataset.v)));
+  return m;
+}
+function countUp(el, from, to, dur, delay) {
+  const t0 = performance.now() + delay, fmt = x => Math.round(x * 100) + '%';
+  el.textContent = fmt(from);
+  const step = now => {
+    if (!el.isConnected) return;
+    const k = Math.min(1, Math.max(0, (now - t0) / dur)), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(from + (to - from) * e);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function morph(prev, fresh) {
+  if (RM.matches) return;
+  const done = [];
+  let i = 0;
+  app.querySelectorAll('[data-rk]').forEach(el => {
+    const k = el.dataset.rk, to = Number(el.dataset.v), t = el.dataset.t || 'ring';
+    const from = fresh ? 0 : prev.get(k);
+    if (from == null || isNaN(from) || Math.abs(from - to) < 1e-4) return;
+    const delay = fresh ? 80 + Math.min(i++, 30) * 12 : 0, duration = fresh ? 950 : 700;
+    const opt = { duration, delay, easing: EASE, fill: 'backwards' };
+    if (t === 'ring') {
+      const c = Number(el.dataset.c), off = v => (c * (1 - v)).toFixed(2) + 'px';
+      el.animate([{ strokeDashoffset: off(from), opacity: from < .004 ? 0 : 1 }, { strokeDashoffset: off(to), opacity: to < .004 ? 0 : 1 }], opt);
+      if (!fresh && from < 1 && to >= 1) done.push(el.closest('svg'));
+    } else if (t === 'bar') el.animate([{ width: from * 100 + '%' }, { width: to * 100 + '%' }], opt);
+    else if (t === 'num') countUp(el, from, to, duration, delay);
+  });
+  done.forEach(svg => {
+    svg.classList.remove('burst'); void svg.getBoundingClientRect(); svg.classList.add('burst');
+    svg.closest('.counter-row')?.classList.add('reach');
+  });
+  return done.length;
+}
+
+function confetti(origin) {
+  if (RM.matches || !origin) return;
+  const r = origin.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const layer = document.createElement('div');
+  layer.className = 'confetti'; layer.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(layer);
+  const cs = getComputedStyle(document.documentElement), colors = ['--c-trabalho', '--c-saude', '--c-estudos', '--c-habitos', '--ok'].map(v => cs.getPropertyValue(v).trim());
+  for (let n = 0; n < 34; n++) {
+    const s = document.createElement('i'), a = Math.random() * Math.PI * 2, dist = 70 + Math.random() * 110;
+    s.style.cssText = `left:${cx}px;top:${cy}px;background:${colors[n % colors.length]};${n % 3 ? '' : 'border-radius:50%;'}`;
+    layer.appendChild(s);
+    s.animate([
+      { transform: 'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity: 1 },
+      { transform: `translate(${Math.cos(a) * dist}px, ${Math.sin(a) * dist - 40}px) scale(1) rotate(${Math.random() * 540}deg)`, opacity: 1, offset: .55 },
+      { transform: `translate(${Math.cos(a) * dist * 1.15}px, ${Math.sin(a) * dist + 90}px) scale(.8) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+    ], { duration: 1100 + Math.random() * 500, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'forwards' });
+  }
+  setTimeout(() => layer.remove(), 1800);
 }
 
 const BACKUP_KEY = 'painelSemanal.lastBackup', SNOOZE_KEY = 'painelSemanal.backupSnooze';
@@ -1226,9 +1372,11 @@ function render() {
   if (!state.week.days[ui.day]) ui.day = defaultDay();
   const fk = document.activeElement?.dataset?.fk;
   const views = { dia: renderDay, semana: renderWeek, graficos: renderCharts, historico: renderHistory, editar: renderEdit };
+  const fresh = ui.lastTab !== ui.tab, prev = fresh ? null : snapshot();
   app.innerHTML = banners() + views[ui.tab]();
-  if (ui.lastTab !== ui.tab) { app.classList.remove('anim'); void app.offsetWidth; app.classList.add('anim'); ui.lastTab = ui.tab; }
-  else app.classList.remove('anim');
+  app.classList.remove('anim', 'slide-l', 'slide-r');
+  if (fresh || ui.slide) { void app.offsetWidth; app.classList.add(fresh ? 'anim' : 'slide-' + ui.slide); }
+  ui.lastTab = ui.tab; ui.slide = null;
   const title = ui.tab === 'dia' ? (ui.day === todayISO() ? 'Hoje' : WD_LONG[weekdayIdx(ui.day)]) : TAB_TITLE[ui.tab];
   document.getElementById('pageTitle').textContent = title;
   document.getElementById('navTitle').textContent = title;
@@ -1240,12 +1388,25 @@ function render() {
   if (tb.dataset.t !== state.settings.theme) { tb.innerHTML = th.svg; tb.dataset.t = state.settings.theme; }
   tb.setAttribute('aria-label', `Tema: ${th.name}. Tocar para alternar`);
   if (fk) document.querySelector(`[data-fk="${CSS.escape(fk)}"]`)?.focus({ preventScroll: true });
-  if (ui.pop) { document.querySelector(`[data-fk="${CSS.escape(ui.pop)}"]`)?.classList.add('pop'); ui.pop = null; }
+  if (ui.pop) {
+    const el = document.querySelector(`[data-fk="${CSS.escape(ui.pop)}"]`);
+    if (el) el.classList.add(el.classList.contains('done') || el.classList.contains('counter-row') ? 'pop' : 'unpop');
+    ui.pop = null;
+  }
+  const completed = morph(prev, fresh);
+  // Dia inteiro fechado agora há pouco → confete 🎉
+  const dp = ui.tab === 'dia' ? dayPct(dayAreas(ui.day)) : null;
+  if (!fresh && ui.tab === 'dia' && ui.lastPct?.day === ui.day && ui.lastPct.pct < 1 && dp >= 1) {
+    setTimeout(() => confetti(app.querySelector('.hero .rings')), 350);
+    haptic(true); toast('Dia completo! 🎉 Mandou bem');
+  } else if (completed && ui.didToggle) haptic(true);
+  ui.lastPct = { day: ui.day, pct: dp ?? 0 };
+  ui.didToggle = false;
 }
 
 function commit(popKey) {
   save();
-  if (popKey) { ui.pop = popKey; haptic(); }
+  if (popKey) { ui.pop = popKey; ui.didToggle = true; haptic(); }
   render();
 }
 
@@ -1271,7 +1432,7 @@ function moveItem(list, id, dir) {
 }
 
 const actions = {
-  'select-day': el => { ui.day = el.dataset.date; render(); },
+  'select-day': el => { if (el.dataset.date === ui.day) return; ui.slide = el.dataset.date > ui.day ? 'l' : 'r'; ui.day = el.dataset.date; render(); },
   'open-day': el => { ui.day = el.dataset.date; ui.tab = 'dia'; render(); window.scrollTo(0, 0); },
   'toggle-ontime': el => { const d = state.week.days[ui.day]; d.onTime = !d.onTime; commit(el.dataset.fk); },
   'toggle-demand': el => { const x = state.week.days[el.dataset.date].demands.find(y => y.id === el.dataset.id); if (x) { x.done = !x.done; commit(el.dataset.fk); } },
@@ -1374,7 +1535,13 @@ app.addEventListener('submit', e => {
 
 app.addEventListener('toggle', e => {
   const d = e.target.closest?.('details[data-sec]');
-  if (d) { if (d.open) ui.open.add(d.dataset.sec); else ui.open.delete(d.dataset.sec); }
+  if (d) {
+    if (d.open) {
+      if (!ui.open.has(d.dataset.sec)) { d.classList.add('opening'); setTimeout(() => d.classList.remove('opening'), 450); }
+      ui.open.add(d.dataset.sec);
+    }
+    else ui.open.delete(d.dataset.sec);
+  }
 }, true);
 
 document.querySelector('nav.tabs').addEventListener('click', e => {
@@ -1387,7 +1554,9 @@ document.querySelector('nav.tabs').addEventListener('click', e => {
 document.getElementById('themeBtn').addEventListener('click', () => {
   const order = ['auto', 'light', 'dark'];
   state.settings.theme = order[(order.indexOf(state.settings.theme) + 1) % 3];
-  applyTheme(); commit();
+  const swap = () => { applyTheme(); commit(); };
+  // Crossfade suave entre claro/escuro (Safari 18+, Chrome); sem suporte, troca direto.
+  if (document.startViewTransition && !RM.matches) document.startViewTransition(swap); else swap();
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
@@ -1411,6 +1580,14 @@ function openNewWeek() {
   dlgForm.querySelector('#nwAll')?.addEventListener('change', ev => dlgForm.querySelectorAll('input[name=carry]').forEach(c => { c.checked = ev.target.checked; }));
   dlg.showModal();
 }
+// Fecha a folha deslizando pra baixo em vez de sumir de uma vez.
+dlgForm.addEventListener('submit', e => {
+  if (RM.matches) return;
+  e.preventDefault();
+  const v = e.submitter?.value || '';
+  dlg.classList.add('closing');
+  setTimeout(() => { dlg.classList.remove('closing'); dlg.close(v); }, 230);
+});
 dlg.addEventListener('close', () => {
   if (dlg.returnValue !== 'ok') return;
   const pend = dlgForm._pend || [], chosen = [...dlgForm.querySelectorAll('input[name=carry]:checked')].map(c => pend[Number(c.value)]);
