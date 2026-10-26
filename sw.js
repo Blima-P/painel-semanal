@@ -1,6 +1,6 @@
 // Service worker: deixa o painel funcionando offline.
 // Ao publicar uma versão nova, aumente o número em CACHE.
-const CACHE = 'painel-v3';
+const CACHE = 'painel-v4';
 const ASSETS = [
   './',
   './index.html',

@@ -88,7 +88,7 @@ O agente mexe no objeto `CONFIG` no topo do `index.html` (datas, metas, demandas
 ## 🛠️ Pros curiosos
 
 - `index.html`: o app inteiro (HTML + CSS + JS), sem build e sem dependências. O `CONFIG` fica no topo.
-- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v3` → `painel-v4`).
+- `sw.js`: service worker (modo offline). Quando publicar mudanças, aumente o `CACHE` (`painel-v4` → `painel-v5`).
 - `manifest.json` + ícones: deixam instalar como app.
 - Os dados ficam no `localStorage` com a chave `painelSemanal.v1`.
 - Pra testar outra data: `?data=2026-11-01` no fim do link.
