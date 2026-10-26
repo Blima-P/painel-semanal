@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel Semanal</title>
+<meta name="description" content="Painel semanal de hábitos, metas e tarefas">
+<meta name="theme-color" content="#4338ca">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Painel">
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO — edite aqui (ou peça ao agente na "rotina de segunda").
+   - Sempre que mudar algo, aumente o configVersion (+1). O app aplica as
+     mudanças sem apagar histórico, marcações nem o que você editou no painel.
+   - Dias da semana são índices: 0=Seg 1=Ter 2=Qua 3=Qui 4=Sex 5=Sáb 6=Dom.
+   - Datas no formato 'AAAA-MM-DD'.
+   ===================================================================== */
+const CONFIG = {
+  configVersion: 1,
+  weekStart: '2026-10-26', // segunda-feira da semana atual
+
+  // Lista curta do que mudou nesta versão (aparece uma vez no app)
+  changelog: [],
+
+  settings: {
+    workStartTime: '08:00',     // horário de chegada no trabalho
+    wakeTarget: '05:00',        // horário-alvo para acordar
+    waterGoalLiters: 6,         // meta diária de água (L)
+    bottleLiters: 1,            // tamanho da garrafa do contador (L)
+    studyStep: 0.5,             // passo do contador de estudo (h)
+    studySplit: [               // divisão das horas diárias de estudo
+      { id: 'aws',    label: 'AWS Cloud Practitioner', hours: 2 },
+      { id: 'ingles', label: 'Inglês',                 hours: 1 }
+    ],
+    workDays:  [0, 1, 2, 3, 4], // dias úteis (seg–sex)
+    studyDays: [0, 1, 2, 3, 4, 5], // dias com meta de estudo (seg–sáb)
+    restDays:  [6]              // descanso total (domingo)
+  },
+
+  // Metas semanais. "metric" = progresso calculado automaticamente.
+  goals: [
+    { id: 'g-trab-horario',  area: 'trabalho', text: 'Chegar no horário todos os dias úteis', metric: 'onTime' },
+    { id: 'g-trab-demandas', area: 'trabalho', text: 'Entregar o máximo de demandas por dia', metric: 'demands' },
+    { id: 'g-saude-treino',  area: 'saude',    text: 'Treinar e correr todos os dias (seg a sáb)', metric: 'training' },
+    { id: 'g-saude-descanso',area: 'saude',    text: 'Domingo de descanso total (sem treino)' },
+    { id: 'g-aws-horas',     area: 'estudos',  text: 'AWS: 12 h de estudo na semana', metric: 'study:aws' },
+    { id: 'g-aws-d3',        area: 'estudos',  text: 'AWS: revisar Domínio 3 – Tecnologia e Serviços (EC2, S3, RDS, Lambda, VPC)' },
+    { id: 'g-aws-d4',        area: 'estudos',  text: 'AWS: estudar Domínio 4 – Cobrança, Preços e Suporte (Pricing Calculator, Organizations, planos de suporte)' },
+    { id: 'g-aws-simulados', area: 'estudos',  text: 'AWS: fazer 2 simulados completos (meta ≥ 75%) e revisar os erros' },
+    { id: 'g-ing-horas',     area: 'estudos',  text: 'Inglês: 6 h de estudo na semana', metric: 'study:ingles' },
+    { id: 'g-ing-listening', area: 'estudos',  text: 'Inglês: 3 sessões de listening sem legenda em português' },
+    { id: 'g-ing-vocab',     area: 'estudos',  text: 'Inglês: 30 palavras/expressões de TI e cloud (flashcards)' },
+    { id: 'g-ing-pratica',   area: 'estudos',  text: 'Inglês: 1 conversa ou texto curto + ler a documentação da AWS em inglês' }
+  ],
+
+  // Atividades fixas por dia da semana (0=Seg ... 6=Dom)
+  fixed: [
+    [{ id: 'fx-muay', text: 'Muay thai', icon: '🥊' }, { id: 'fx-academia', text: 'Academia', icon: '🏋️' }],
+    [{ id: 'fx-correr', text: 'Correr', icon: '🏃' }, { id: 'fx-academia', text: 'Academia', icon: '🏋️' }],
+    [{ id: 'fx-muay', text: 'Muay thai', icon: '🥊' }, { id: 'fx-academia', text: 'Academia', icon: '🏋️' }],
+    [{ id: 'fx-correr', text: 'Correr', icon: '🏃' }, { id: 'fx-academia', text: 'Academia', icon: '🏋️' }],
+    [{ id: 'fx-muay', text: 'Muay thai', icon: '🥊' }, { id: 'fx-academia', text: 'Academia', icon: '🏋️' }],
+    [{ id: 'fx-academia', text: 'Academia', icon: '🏋️' }, { id: 'fx-correr', text: 'Correr', icon: '🏃' }],
+    [] // Domingo: descanso total
+  ],
+
+  // Treinos diferentes do padrão em datas específicas. Ex.:
+  // '2026-10-28': [{ id: 'fx-correr', text: 'Correr', icon: '🏃' }]
+  fixedOverrides: {},
+
+  // Demandas de trabalho por dia. Ex.:
+  // '2026-10-26': [{ id: 'd-2610-1', text: 'Enviar relatório X' }]
+  demands: {},
+
+  // Compromissos, provas e prazos por dia. Ex.:
+  // '2026-10-30': [{ id: 'e-3010-1', text: '19h – simulado AWS' }]
+  events: {},
+
+  // Hábitos diários. type: check | water | study | wake
+  // when: all (todo dia) | training (dias de treino) | study (dias de estudo)
+  habits: [
+    { id: 'h-agua',       icon: '💧', label: 'Beber 6 L de água',       type: 'water', when: 'all',      enabled: true },
+    { id: 'h-sono',       icon: '😴', label: 'Dormir 7 a 8 horas',      type: 'check', when: 'all',      enabled: true },
+    { id: 'h-exercicio',  icon: '🏃', label: 'Exercício físico',        type: 'check', when: 'training', enabled: true },
+    { id: 'h-estudo',     icon: '📚', label: 'Estudar pelo menos 3 h',  type: 'study', when: 'study',    enabled: true },
+    { id: 'h-acordar',    icon: '⏰', label: 'Acordar cedo',            type: 'wake',  when: 'all',      enabled: true },
+    { id: 'h-comida',     icon: '🥗', label: 'Comer saudável',          type: 'check', when: 'all',      enabled: true },
+    // Extras sugeridos (ative/desative em Editar → Hábitos)
+    { id: 'h-planejar',   icon: '📝', label: 'Planejar o dia (5 min)',          type: 'check', when: 'all', enabled: true, extra: true },
+    { id: 'h-leitura',    icon: '📖', label: 'Ler 20 minutos',                  type: 'check', when: 'all', enabled: true, extra: true },
+    { id: 'h-sem-celular',icon: '📵', label: 'Sem celular 1 h antes de dormir', type: 'check', when: 'all', enabled: true, extra: true }
+  ]
+};
+</script>
+
+<style>
+:root {
+  --bg: #f3f5fa; --card: #ffffff; --text: #0f172a; --muted: #4b5568; --border: #d5dce8;
+  --primary: #4338ca; --on-primary: #ffffff; --ok: #15803d; --on-ok: #ffffff; --ok-bg: #e7f8ee;
+  --danger: #b91c1c; --track: #e3e8f1; --warn-bg: #fff7e0; --warn-text: #7a4a00;
+  --c-trabalho: #1d4ed8; --c-saude: #047857; --c-estudos: #6d28d9; --c-habitos: #b45309;
+  --shadow: 0 1px 3px rgba(15, 23, 42, .08); --radius: 16px;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0b1120; --card: #141d2f; --text: #e8edf5; --muted: #a6b2c4; --border: #2a3750;
+  --primary: #8b93fb; --on-primary: #0b1120; --ok: #4ade80; --on-ok: #052e16; --ok-bg: #12301d;
+  --danger: #f87171; --track: #222e45; --warn-bg: #3a2b0a; --warn-text: #fde68a;
+  --c-trabalho: #60a5fa; --c-saude: #34d399; --c-estudos: #b49cfc; --c-habitos: #fbbf24;
+  --shadow: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+header.top {
+  position: sticky; top: 0; z-index: 10; background: var(--bg);
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border);
+}
+header.top h1 { font-size: 1.15rem; margin: 0; line-height: 1.2; }
+header.top .sub { color: var(--muted); font-size: .9rem; }
+header.top .grow { flex: 1; }
+.icon-btn {
+  min-width: 48px; min-height: 48px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--card); font-size: .95rem; padding: 0 10px;
+}
+main { max-width: 760px; margin: 0 auto; padding: 12px 12px 24px; }
+
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex;
+  background: var(--card); border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+nav.tabs button {
+  flex: 1; min-height: 64px; border: 0; background: none; font-size: .78rem; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+nav.tabs button .ic { font-size: 1.35rem; line-height: 1; }
+nav.tabs button[aria-current="page"] { color: var(--primary); font-weight: 700; }
+
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px; margin: 0 0 14px;
+}
+.card h2, .card h3 { margin: 0 0 10px; font-size: 1.08rem; display: flex; align-items: center; gap: 8px; }
+.card h2 .grow, .card h3 .grow { flex: 1; }
+.card.area-trabalho { border-top: 5px solid var(--c-trabalho); }
+.card.area-saude    { border-top: 5px solid var(--c-saude); }
+.card.area-estudos  { border-top: 5px solid var(--c-estudos); }
+.card.area-habitos  { border-top: 5px solid var(--c-habitos); }
+.muted { color: var(--muted); }
+.small { font-size: .88rem; }
+.stack { display: grid; gap: 8px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.row .grow { flex: 1; min-width: 0; }
+
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 1 1 0; min-width: 44px; min-height: 64px; border-radius: 14px; border: 2px solid var(--border);
+  background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: .8rem; padding: 4px 6px; line-height: 1.15;
+}
+.chip b { font-size: 1.05rem; }
+.chip.today { border-color: var(--primary); }
+.chip[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.chip .p { font-size: .72rem; opacity: .9; }
+
+.check {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; text-align: left;
+  padding: 10px 12px; border: 2px solid var(--border); border-radius: 12px; background: var(--card);
+  transition: background .15s, border-color .15s;
+}
+.check .box {
+  flex: none; width: 30px; height: 30px; border-radius: 9px; border: 2px solid var(--muted);
+  display: grid; place-items: center; color: transparent; font-weight: 900; font-size: 1.05rem;
+}
+.check .lbl { flex: 1; min-width: 0; }
+.check .lbl small { display: block; color: var(--muted); font-size: .82rem; }
+.check.done { border-color: var(--ok); background: var(--ok-bg); }
+.check.done .box { background: var(--ok); border-color: var(--ok); color: var(--on-ok); }
+.check.na { opacity: .6; cursor: default; border-style: dashed; }
+.tag {
+  display: inline-block; font-size: .72rem; padding: 2px 7px; border-radius: 99px;
+  background: var(--track); color: var(--text); margin-left: 4px; vertical-align: middle; white-space: nowrap;
+}
+.streak { font-size: .82rem; font-weight: 700; white-space: nowrap; }
+
+.counter-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 2px solid var(--border); border-radius: 12px;
+}
+.counter-row.done { border-color: var(--ok); background: var(--ok-bg); }
+.counter-row .lbl { flex: 1; min-width: 0; }
+.counter-row .lbl small { display: block; color: var(--muted); font-size: .82rem; }
+.counter { display: flex; align-items: center; gap: 6px; }
+.counter button {
+  width: 48px; height: 48px; border-radius: 12px; border: 2px solid var(--border);
+  background: var(--card); font-size: 1.45rem; font-weight: 700; line-height: 1;
+}
+.counter output { min-width: 52px; text-align: center; font-weight: 700; }
+.bottles { display: flex; gap: 2px; margin-top: 4px; font-size: .95rem; letter-spacing: 1px; }
+.bottles .off { filter: grayscale(1); opacity: .35; }
+
+.bar { display: block; height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.bar > span { display: block; height: 100%; border-radius: 99px; background: var(--primary); transition: width .35s ease; }
+.bar.lg { height: 14px; }
+.prog { display: grid; grid-template-columns: 88px 1fr 46px; align-items: center; gap: 8px; font-size: .9rem; margin: 6px 0; }
+.prog .v { text-align: right; font-weight: 700; }
+
+.hero { display: flex; align-items: center; gap: 14px; }
+.hero .grow { flex: 1; min-width: 0; }
+.hero h2 { margin: 0; font-size: 1.25rem; }
+.badge-today {
+  display: inline-block; background: var(--primary); color: var(--on-primary);
+  border-radius: 99px; padding: 2px 10px; font-size: .78rem; font-weight: 700; margin-left: 6px; vertical-align: middle;
+}
+.donut { margin: 0; text-align: center; }
+.donut svg { width: 100%; max-width: 96px; display: block; margin: 0 auto; }
+.donut .track { fill: none; stroke: var(--track); stroke-width: 11; }
+.donut .arc { fill: none; stroke-width: 11; stroke-linecap: round; transition: stroke-dasharray .4s ease; }
+.donut .donut-txt { font-size: 19px; font-weight: 800; fill: var(--text); }
+.donut figcaption { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.hero .donut svg { width: 84px; }
+.hero .donut figcaption { display: none; }
+.donut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--border); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 10px; }
+.chart .axis-hl { fill: var(--primary); font-weight: 800; }
+.chart .val { fill: var(--text); font-size: 10px; font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .82rem; margin-top: 6px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+.banner {
+  border-radius: 14px; padding: 12px 14px; margin: 0 0 14px; background: var(--warn-bg); color: var(--warn-text);
+  border: 1px solid var(--border);
+}
+.banner.rest { background: var(--ok-bg); color: var(--text); }
+.banner ul { margin: 6px 0 8px; padding-left: 20px; }
+.banner .row { margin-top: 8px; }
+
+.btn {
+  min-height: 48px; padding: 0 16px; border-radius: 12px; border: 2px solid var(--border);
+  background: var(--card); font-weight: 600;
+}
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn.block { width: 100%; }
+.btn.sm { min-height: 40px; padding: 0 12px; font-size: .9rem; }
+
+.daycard {
+  display: block; width: 100%; text-align: left; border: 2px solid var(--border); border-radius: 14px;
+  background: var(--card); padding: 12px; margin-bottom: 10px;
+}
+.daycard.today { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary) inset; }
+.daycard .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.daycard .head b { font-size: 1.02rem; }
+.daycard .head .grow { flex: 1; }
+.daycard .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .84rem; color: var(--muted); margin-top: 6px; }
+
+.goal-area { font-size: .85rem; font-weight: 700; color: var(--muted); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.goal-area:first-of-type { margin-top: 0; }
+.mini { display: block; margin-top: 4px; height: 6px; }
+
+.heat { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: .82rem; }
+.heat th { font-weight: 600; color: var(--muted); }
+.heat th.h { text-align: left; font-weight: 500; color: var(--text); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heat td { height: 26px; min-width: 26px; border-radius: 6px; text-align: center; }
+.heat td.c-done { background: var(--ok); color: var(--on-ok); }
+.heat td.c-part { background: color-mix(in srgb, var(--ok) 40%, var(--track)); }
+.heat td.c-miss { background: var(--track); }
+.heat td.c-future { background: transparent; border: 1px dashed var(--border); }
+.heat td.c-na { background: transparent; color: var(--muted); }
+.heat td.st { font-weight: 700; white-space: nowrap; }
+
+table.cmp { width: 100%; border-collapse: collapse; font-size: .9rem; }
+table.cmp th, table.cmp td { padding: 8px 4px; border-bottom: 1px solid var(--border); text-align: right; }
+table.cmp th:first-child, table.cmp td:first-child { text-align: left; }
+.up { color: var(--ok); font-weight: 700; } .down { color: var(--danger); font-weight: 700; }
+
+details.sec { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+details.sec > summary {
+  list-style: none; padding: 14px; min-height: 52px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer;
+}
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary::after { content: "▸"; margin-left: auto; transition: transform .2s; }
+details.sec[open] > summary::after { transform: rotate(90deg); }
+details.sec > .inner { padding: 0 14px 14px; }
+.ed-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ed-row:last-of-type { border-bottom: 0; }
+.ed-row input[type=text], .ed-row select { min-width: 0; }
+.ed-row input[type=text]:not(.ico-in) { order: -1; flex: 1 1 100%; }
+.ed-row .ico-in { width: 56px; flex: none; text-align: center; }
+.ed-row .push { margin-left: auto; }
+.add-form .ico-in { flex: 0 0 56px; text-align: center; }
+input[type=text], input[type=time], input[type=number], select {
+  min-height: 46px; border: 2px solid var(--border); border-radius: 10px; background: var(--card); padding: 0 10px;
+}
+.ed-btn {
+  flex: none; width: 48px; height: 46px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card); font-size: 1rem; padding: 0;
+}
+.ed-btn:disabled { opacity: .35; cursor: default; }
+.ed-btn.del { color: var(--danger); }
+.add-form { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.add-form input[type=text] { flex: 1 1 160px; }
+.sub-h { font-weight: 700; margin: 14px 0 6px; font-size: .95rem; }
+.sub-h:first-child { margin-top: 0; }
+.field { display: grid; gap: 4px; margin-bottom: 10px; font-size: .92rem; }
+.switch {
+  flex: none; min-width: 64px; height: 40px; border-radius: 99px; border: 2px solid var(--border);
+  background: var(--track); font-size: .78rem; font-weight: 700;
+}
+.switch[aria-pressed="true"] { background: var(--ok); color: var(--on-ok); border-color: var(--ok); }
+
+#toast {
+  position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .92rem;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; max-width: 90vw;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+dialog {
+  border: 0; border-radius: 18px; padding: 0; width: min(560px, 94vw); max-height: 86vh;
+  background: var(--card); color: var(--text);
+}
+dialog::backdrop { background: rgba(0, 0, 0, .55); }
+dialog .dlg { padding: 16px; display: grid; gap: 10px; }
+dialog .dlg h2 { margin: 0; font-size: 1.15rem; }
+dialog .list { max-height: 46vh; overflow: auto; display: grid; gap: 6px; }
+dialog label.opt {
+  display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 8px 10px;
+  border: 2px solid var(--border); border-radius: 10px;
+}
+dialog label.opt input { width: 24px; height: 24px; flex: none; accent-color: var(--primary); }
+dialog .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(.96); } 100% { transform: scale(1); } }
+.pop { animation: pop .25s ease; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media (min-width: 640px) { .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } .grid2 > .card { margin: 0; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="grow">
+    <h1>Painel Semanal</h1>
+    <div class="sub" id="weekRange"></div>
+  </div>
+  <button class="icon-btn" id="themeBtn" type="button" aria-label="Alternar tema"></button>
+</header>
+
+<main id="app" aria-live="off"></main>
+
+<nav class="tabs" aria-label="Navegação principal">
+  <button type="button" data-tab="dia"><span class="ic" aria-hidden="true">☀️</span>Hoje</button>
+  <button type="button" data-tab="semana"><span class="ic" aria-hidden="true">🗓️</span>Semana</button>
+  <button type="button" data-tab="graficos"><span class="ic" aria-hidden="true">📊</span>Gráficos</button>
+  <button type="button" data-tab="historico"><span class="ic" aria-hidden="true">🕘</span>Histórico</button>
+  <button type="button" data-tab="editar"><span class="ic" aria-hidden="true">✏️</span>Editar</button>
+</nav>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="newWeekDlg" aria-labelledby="nwTitle"><form method="dialog" class="dlg" id="newWeekForm"></form></dialog>
+<input type="file" id="importFile" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true">
+
+<script>
+'use strict';
+/* ============================ Utilitários ============================ */
+const STORAGE_KEY = 'painelSemanal.v1';
+const SCHEMA = 1;
+const AREAS = [
+  { id: 'trabalho', label: 'Trabalho', icon: '💼', color: 'var(--c-trabalho)' },
+  { id: 'saude',    label: 'Saúde',    icon: '💪', color: 'var(--c-saude)' },
+  { id: 'estudos',  label: 'Estudos',  icon: '📚', color: 'var(--c-estudos)' },
+  { id: 'habitos',  label: 'Hábitos',  icon: '✅', color: 'var(--c-habitos)' }
+];
+const AREA = Object.fromEntries(AREAS.map(a => [a.id, a]));
+const WD_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+const WD_LONG = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+const WHEN_LABEL = { all: 'Todos os dias', training: 'Dias de treino', study: 'Dias de estudo' };
+
+const pad = n => String(n).padStart(2, '0');
+const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmtISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (s, n) => { const d = parseDate(s); d.setDate(d.getDate() + n); return fmtISO(d); };
+const weekdayIdx = s => (parseDate(s).getDay() + 6) % 7;
+const mondayOf = s => addDays(s, -weekdayIdx(s));
+const fmtBR = s => { const d = parseDate(s); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; };
+const isISODate = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+function todayISO() {
+  const q = new URLSearchParams(location.search).get('data'); // ?data=AAAA-MM-DD (testes)
+  return isISODate(q) ? q : fmtISO(new Date());
+}
+const clone = o => JSON.parse(JSON.stringify(o));
+const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clamp01 = x => Math.max(0, Math.min(1, Number(x) || 0));
+const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+const pctTxt = p => p == null ? '—' : Math.round(p * 100) + '%';
+const num = n => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
+/* ============================== Estado ============================== */
+let state = null;
+const ui = { tab: 'dia', day: null, editing: {}, open: new Set(['ed-metas']), pop: null, swWaiting: null };
+
+function buildWeek(start) {
+  const days = {};
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(start, i);
+    days[d] = {
+      onTime: false, fixedDone: {}, habits: {}, study: {},
+      demands: clone(CONFIG.demands?.[d] || []).map(x => ({ ...x, done: false })),
+      events: clone(CONFIG.events?.[d] || []),
+      fixedOverride: CONFIG.fixedOverrides?.[d] ? clone(CONFIG.fixedOverrides[d]) : null
+    };
+  }
+  return { start, goalsDone: {}, days };
+}
+
+function freshState() {
+  let start = CONFIG.weekStart;
+  const t = todayISO();
+  if (t > addDays(start, 6)) start = mondayOf(t);
+  return {
+    schema: SCHEMA, configVersion: CONFIG.configVersion, base: clone(CONFIG),
+    settings: { ...clone(CONFIG.settings), theme: 'auto' },
+    habits: clone(CONFIG.habits), goals: clone(CONFIG.goals), fixed: clone(CONFIG.fixed),
+    week: buildWeek(start), history: [], seenChangelog: CONFIG.configVersion
+  };
+}
+
+/* Mescla listas por id: aplica o que o CONFIG mudou, preserva o que o usuário
+   adicionou/editou/removeu no painel e as marcações (done). */
+function mergeList(cur, base, next) {
+  cur = cur || []; base = base || []; next = next || [];
+  const bMap = new Map(base.map(i => [i.id, i])), nMap = new Map(next.map(i => [i.id, i]));
+  const out = [];
+  for (const item of cur) {
+    if (nMap.has(item.id)) {
+      const n = nMap.get(item.id), b = bMap.get(item.id);
+      out.push(!b || !same(n, b) ? { ...item, ...clone(n) } : item);
+    } else if (!bMap.has(item.id)) out.push(item); // item do usuário
+  }
+  const have = new Set(out.map(i => i.id));
+  next.forEach((n, idx) => {
+    if (have.has(n.id)) return;
+    const b = bMap.get(n.id);
+    if (b && same(n, b)) return; // removido pelo usuário e não mudou no CONFIG
+    let pos = 0;
+    for (let k = idx - 1; k >= 0; k--) {
+      const j = out.findIndex(o => o.id === next[k].id);
+      if (j >= 0) { pos = j + 1; break; }
+    }
+    out.splice(pos, 0, clone(n)); have.add(n.id);
+  });
+  return out;
+}
+
+function applyConfigUpdate() {
+  const s = state, base = s.base || {};
+  for (const k of Object.keys(CONFIG.settings)) {
+    if (!same(CONFIG.settings[k], base.settings?.[k]) || s.settings[k] === undefined) s.settings[k] = clone(CONFIG.settings[k]);
+  }
+  s.habits = mergeList(s.habits, base.habits, CONFIG.habits);
+  s.goals = mergeList(s.goals, base.goals, CONFIG.goals);
+  for (let wd = 0; wd < 7; wd++) s.fixed[wd] = mergeList(s.fixed[wd], base.fixed?.[wd], CONFIG.fixed[wd]);
+
+  if (CONFIG.weekStart > s.week.start) {
+    s.history.push(snapshotWeek());
+    s.goals = s.goals.filter(g => !g.once);
+    s.week = buildWeek(CONFIG.weekStart);
+  }
+  for (const d of weekDates()) {
+    const day = s.week.days[d];
+    day.demands = mergeList(day.demands, base.demands?.[d], CONFIG.demands?.[d]).map(x => ({ done: false, ...x }));
+    day.events = mergeList(day.events, base.events?.[d], CONFIG.events?.[d]);
+    const ov = CONFIG.fixedOverrides?.[d], bov = base.fixedOverrides?.[d];
+    if (!same(ov, bov)) day.fixedOverride = ov ? clone(ov) : null;
+  }
+  s.base = clone(CONFIG);
+  s.configVersion = CONFIG.configVersion;
+}
+
+function isValidState(s) {
+  return s && s.schema === SCHEMA && s.week && isISODate(s.week.start) && s.week.days &&
+    Array.isArray(s.habits) && Array.isArray(s.goals) && Array.isArray(s.fixed) && Array.isArray(s.history) && s.settings;
+}
+
+function hydrate(obj) {
+  state = isValidState(obj) ? obj : freshState();
+  // garante a integridade dos dias da semana
+  for (const d of weekDates()) {
+    const day = state.week.days[d] || (state.week.days[d] = buildWeek(state.week.start).days[d]);
+    day.fixedDone ||= {}; day.habits ||= {}; day.study ||= {}; day.demands ||= []; day.events ||= [];
+    if (day.fixedOverride === undefined) day.fixedOverride = null;
+  }
+  state.week.goalsDone ||= {};
+  while (state.fixed.length < 7) state.fixed.push([]);
+  if (state.configVersion !== CONFIG.configVersion) applyConfigUpdate();
+}
+
+function load() {
+  let obj = null;
+  try { obj = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { obj = null; }
+  hydrate(obj);
+  save();
+}
+
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch (e) { toast('Não foi possível salvar (armazenamento cheio?). Exporte um backup.'); }
+}
+
+/* ============================== Cálculos ============================== */
+const weekDates = (start = state.week.start) => Array.from({ length: 7 }, (_, i) => addDays(start, i));
+const weekEnd = () => addDays(state.week.start, 6);
+const isWork = wd => state.settings.workDays.includes(wd);
+const isRest = wd => state.settings.restDays.includes(wd);
+const isStudy = wd => state.settings.studyDays.includes(wd);
+const studyGoal = () => state.settings.studySplit.reduce((a, s) => a + (Number(s.hours) || 0), 0);
+const bottlesGoal = () => Math.max(1, Math.round(Number(state.settings.waterGoalLiters) / Number(state.settings.bottleLiters || 1)));
+const fixedFor = d => state.week.days[d].fixedOverride || state.fixed[weekdayIdx(d)] || [];
+const studyTotal = day => state.settings.studySplit.reduce((a, s) => a + (Number(day.study[s.id]) || 0), 0);
+
+function habitApplies(h, wd) {
+  if (!h.enabled) return false;
+  if (h.when === 'training') return !isRest(wd);
+  if (h.when === 'study') return isStudy(wd);
+  return true;
+}
+function habitScore(h, day) {
+  if (h.type === 'water') return clamp01((day.habits[h.id] || 0) / bottlesGoal());
+  if (h.type === 'study') return studyGoal() ? clamp01(studyTotal(day) / studyGoal()) : 1;
+  return day.habits[h.id] ? 1 : 0;
+}
+
+function dayAreas(d) {
+  const wd = weekdayIdx(d), day = state.week.days[d];
+  const r = { trabalho: [], saude: [], estudos: [], habitos: [] };
+  if (isWork(wd)) r.trabalho.push(day.onTime ? 1 : 0);
+  day.demands.forEach(x => r.trabalho.push(x.done ? 1 : 0));
+  if (!isRest(wd)) fixedFor(d).forEach(f => r.saude.push(day.fixedDone[f.id] ? 1 : 0));
+  if (isStudy(wd)) state.settings.studySplit.forEach(s => { if (Number(s.hours) > 0) r.estudos.push(clamp01((Number(day.study[s.id]) || 0) / s.hours)); });
+  state.habits.forEach(h => { if (habitApplies(h, wd)) r.habitos.push(habitScore(h, day)); });
+  const out = {};
+  for (const k in r) out[k] = { pct: avg(r[k]), done: r[k].filter(x => x >= 1).length, total: r[k].length };
+  return out;
+}
+const dayPct = areas => avg(Object.values(areas).map(a => a.pct).filter(p => p != null));
+
+function goalMetric(g) {
+  if (!g.metric) return null;
+  const dates = weekDates(), W = state.week.days;
+  if (g.metric === 'onTime') {
+    const ds = dates.filter(d => isWork(weekdayIdx(d)));
+    return { v: ds.filter(d => W[d].onTime).length, t: ds.length, unit: 'dias' };
+  }
+  if (g.metric === 'demands') {
+    let v = 0, t = 0;
+    dates.forEach(d => W[d].demands.forEach(x => { t++; if (x.done) v++; }));
+    return { v, t, unit: 'demandas', reached: t > 0 && v === t };
+  }
+  if (g.metric === 'training') {
+    const ds = dates.filter(d => !isRest(weekdayIdx(d)) && fixedFor(d).length);
+    return { v: ds.filter(d => fixedFor(d).every(f => W[d].fixedDone[f.id])).length, t: ds.length, unit: 'dias' };
+  }
+  if (g.metric.startsWith('study:')) {
+    const id = g.metric.slice(6), s = state.settings.studySplit.find(x => x.id === id);
+    if (!s) return null;
+    const t = Number(s.hours) * dates.filter(d => isStudy(weekdayIdx(d))).length;
+    return { v: dates.reduce((a, d) => a + (Number(W[d].study[id]) || 0), 0), t, unit: 'h' };
+  }
+  return null;
+}
+function goalStatus() {
+  return state.goals.map(g => {
+    const m = goalMetric(g);
+    const reached = m ? (m.reached ?? (m.t > 0 && m.v >= m.t)) : false;
+    const manual = state.week.goalsDone[g.id];
+    return { ...g, m, done: manual ?? reached };
+  });
+}
+
+function weekStats() {
+  const per = weekDates().map(d => { const areas = dayAreas(d); return { date: d, areas, pct: dayPct(areas) }; });
+  const areas = {};
+  AREAS.forEach(a => { areas[a.id] = avg(per.map(p => p.areas[a.id].pct).filter(x => x != null)); });
+  const overall = avg(Object.values(areas).filter(x => x != null));
+  const goals = goalStatus();
+  const goalsPct = goals.length ? goals.filter(g => g.done).length / goals.length : null;
+  return { per, areas, overall, goals, goalsPct };
+}
+
+function liveHabitMap() {
+  const map = {};
+  weekDates().forEach(d => {
+    const wd = weekdayIdx(d), day = state.week.days[d], rec = {};
+    state.habits.forEach(h => { if (h.enabled) rec[h.id] = habitApplies(h, wd) ? habitScore(h, day) >= 1 : null; });
+    map[d] = rec;
+  });
+  return map;
+}
+function streakMap() {
+  const map = {};
+  state.history.forEach(w => (w.days || []).forEach(d => { map[d.date] = d.habitDone || {}; }));
+  return Object.assign(map, liveHabitMap());
+}
+// Dias consecutivos concluídos até hoje (hoje ainda em aberto não quebra; dias não aplicáveis são pulados)
+function streak(hid, map) {
+  const t = todayISO(); let c = 0;
+  for (let i = 0; i < 1000; i++) {
+    const rec = map[addDays(t, -i)];
+    if (!rec) { if (i === 0) continue; break; }
+    const v = rec[hid];
+    if (v === null) continue;
+    if (v === undefined) break;
+    if (v) c++; else if (i === 0) continue; else break;
+  }
+  return c;
+}
+
+function snapshotWeek() {
+  const st = weekStats(), map = liveHabitMap();
+  return {
+    start: state.week.start, end: weekEnd(), archivedAt: new Date().toISOString(),
+    summary: {
+      overall: st.overall, areas: st.areas, days: st.per.map(p => p.pct),
+      goals: { done: st.goals.filter(g => g.done).length, total: st.goals.length }
+    },
+    goals: st.goals.map(g => ({ area: g.area, text: g.text, done: !!g.done, metric: g.m ? `${num(g.m.v)}/${num(g.m.t)} ${g.m.unit}` : null })),
+    habits: state.habits.filter(h => h.enabled).map(h => ({ id: h.id, label: h.label, icon: h.icon })),
+    days: weekDates().map((d, i) => {
+      const day = state.week.days[d];
+      return {
+        date: d, pct: st.per[i].pct, onTime: day.onTime, demands: clone(day.demands), events: clone(day.events),
+        fixed: fixedFor(d).map(f => ({ text: f.text, done: !!day.fixedDone[f.id] })),
+        study: clone(day.study), habits: clone(day.habits), habitDone: map[d]
+      };
+    })
+  };
+}
+
+function startNewWeek(carry) {
+  state.history.push(snapshotWeek());
+  const next = addDays(state.week.start, 7), tm = mondayOf(todayISO());
+  const start = tm > next ? tm : next;
+  state.goals = state.goals.filter(g => !g.once);
+  carry.goals.forEach(g => state.goals.push({ id: uid(), area: g.area, text: g.text, once: true, carried: true }));
+  state.week = buildWeek(start);
+  const mon = state.week.days[start];
+  carry.demands.forEach(x => mon.demands.push({ id: uid(), text: x.text, done: false, carried: true }));
+  ui.day = defaultDay();
+  save();
+}
+
+function defaultDay() {
+  const t = todayISO();
+  if (state.week.days[t]) return t;
+  return t > weekEnd() ? weekEnd() : state.week.start;
+}
+/* ============================ Componentes ============================ */
+function bar(p, color = 'var(--primary)', label = '', cls = '') {
+  const v = Math.round((p || 0) * 100);
+  return `<span class="bar ${cls}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}" aria-label="${esc(label)}"><span style="width:${v}%;background:${color}"></span></span>`;
+}
+function progRow(label, p, color) {
+  return `<div class="prog"><span>${esc(label)}</span>${bar(p, color, label)}<span class="v">${pctTxt(p)}</span></div>`;
+}
+function donut(p, color, label) {
+  const r = 38, c = 2 * Math.PI * r, v = p == null ? 0 : clamp01(p);
+  return `<figure class="donut"><svg viewBox="0 0 100 100" role="img" aria-label="${esc(label)}: ${pctTxt(p)}">
+    <circle cx="50" cy="50" r="${r}" class="track"/>
+    <circle cx="50" cy="50" r="${r}" class="arc" style="stroke:${color}" stroke-dasharray="${(c * v).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 50 50)"/>
+    <text x="50" y="57" text-anchor="middle" class="donut-txt">${pctTxt(p)}</text></svg>
+    <figcaption>${esc(label)}</figcaption></figure>`;
+}
+function checkBtn({ fk, act, data = '', label, sub = '', done, extra = '' }) {
+  return `<button type="button" class="check ${done ? 'done' : ''}" data-act="${act}" ${data} data-fk="${esc(fk)}" aria-pressed="${done ? 'true' : 'false'}">
+    <span class="box" aria-hidden="true">✓</span><span class="lbl">${label}${sub ? `<small>${sub}</small>` : ''}</span>${extra}</button>`;
+}
+const streakBadge = n => n > 0 ? `<span class="streak" aria-label="Sequência de ${n} dia${n > 1 ? 's' : ''}">🔥${n}</span>` : '';
+
+/* ============================== Visão do dia ============================== */
+function renderDay() {
+  const d = ui.day, wd = weekdayIdx(d), day = state.week.days[d], t = todayISO();
+  const areas = dayAreas(d), pct = dayPct(areas), sMap = streakMap();
+  const chips = weekDates().map(x => {
+    const p = dayPct(dayAreas(x));
+    return `<button type="button" class="chip ${x === t ? 'today' : ''}" data-act="select-day" data-date="${x}" aria-pressed="${x === d}" aria-label="${WD_LONG[weekdayIdx(x)]} ${fmtBR(x)}, ${pctTxt(p)}">
+      <span>${WD_SHORT[weekdayIdx(x)]}</span><b>${parseDate(x).getDate()}</b><span class="p">${pctTxt(p)}</span></button>`;
+  }).join('');
+
+  let html = `<div class="chips" role="group" aria-label="Escolher dia">${chips}</div>`;
+  html += `<section class="card"><div class="hero">
+      <div class="grow"><h2>${WD_LONG[wd]}${d === t ? '<span class="badge-today">HOJE</span>' : ''}</h2>
+        <div class="muted">${fmtBR(d)} · ${pct != null && pct >= 1 ? 'Dia completo! 🎉' : 'Progresso do dia'}</div></div>
+      ${donut(pct, 'var(--primary)', 'Dia')}</div>
+      ${AREAS.map(a => progRow(a.label, areas[a.id].pct, a.color)).join('')}</section>`;
+
+  if (isRest(wd)) html += `<div class="banner rest">🛌 <b>Descanso total.</b> Hoje não tem treino nem meta de estudo — recupere o corpo e a mente.</div>`;
+  if (day.events.length) html += `<div class="banner">📅 <b>Compromissos e prazos</b><ul>${day.events.map(e => `<li>${esc(e.text)}</li>`).join('')}</ul></div>`;
+
+  html += `<div class="grid2">${cardWork(d, wd, day)}${cardHealth(d, wd, day)}</div>`;
+  html += `<div class="grid2">${cardStudy(d, wd, day)}${cardHabits(d, wd, day, sMap)}</div>`;
+  return html;
+}
+
+function editToggle(key, label) {
+  const on = !!ui.editing[key];
+  return `<button type="button" class="btn sm" data-act="toggle-edit" data-key="${key}" aria-expanded="${on}" aria-label="${on ? 'Concluir edição de' : 'Editar'} ${esc(label)}">${on ? 'Pronto' : '✎ Editar'}</button>`;
+}
+
+function cardWork(d, wd, day) {
+  const key = 'work:' + d, editing = ui.editing[key];
+  let h = `<section class="card area-trabalho"><h3>💼 Trabalho<span class="grow"></span>${editToggle(key, 'demandas')}</h3><div class="stack">`;
+  if (isWork(wd)) h += checkBtn({ fk: 'ontime-' + d, act: 'toggle-ontime', label: `Cheguei no horário (${esc(state.settings.workStartTime)})`, done: day.onTime });
+  if (editing) {
+    h += `<div class="sub-h">Demandas do dia</div>${listEditor('demands:' + d, day.demands)}`;
+    h += `<div class="sub-h">Compromissos, provas e prazos</div>${listEditor('events:' + d, day.events)}`;
+  } else {
+    if (!day.demands.length) h += `<p class="muted small">${isWork(wd) ? 'Nenhuma demanda listada para hoje.' : 'Sem expediente hoje.'}</p>`;
+    day.demands.forEach(x => {
+      h += checkBtn({ fk: 'dem-' + x.id, act: 'toggle-demand', data: `data-date="${d}" data-id="${esc(x.id)}"`, label: esc(x.text), done: x.done, sub: x.carried ? '↪ da semana anterior' : '' });
+    });
+    h += `<form class="add-form" data-add="demands:${d}"><label class="sr-only" for="qd-${d}">Nova demanda</label>
+      <input type="text" id="qd-${d}" name="text" placeholder="+ Adicionar demanda" autocomplete="off" required>
+      <button class="btn" type="submit">Adicionar</button></form>`;
+  }
+  return h + '</div></section>';
+}
+
+function cardHealth(d, wd, day) {
+  const key = 'health:' + d, editing = ui.editing[key];
+  let h = `<section class="card area-saude"><h3>💪 Saúde<span class="grow"></span>${editToggle(key, 'treinos do dia')}</h3><div class="stack">`;
+  if (editing) {
+    h += `<p class="muted small">Mudanças aqui valem só para ${WD_LONG[wd].toLowerCase()} ${fmtBR(d)}. Para mudar o padrão, use a aba Editar.</p>`;
+    h += listEditor('override:' + d, fixedFor(d));
+    if (day.fixedOverride) h += `<button type="button" class="btn sm" data-act="reset-override" data-date="${d}">Voltar ao treino padrão</button>`;
+  } else if (isRest(wd)) {
+    h += `<p>🛌 Domingo é <b>descanso total</b>. Sem treino hoje.</p>`;
+  } else {
+    const fx = fixedFor(d);
+    if (!fx.length) h += `<p class="muted small">Nenhuma atividade fixa hoje.</p>`;
+    fx.forEach(f => {
+      h += checkBtn({ fk: `fx-${d}-${f.id}`, act: 'toggle-fixed', data: `data-date="${d}" data-id="${esc(f.id)}"`, label: `${f.icon ? f.icon + ' ' : ''}${esc(f.text)}`, done: !!day.fixedDone[f.id] });
+    });
+    if (day.fixedOverride) h += `<p class="muted small">Treino diferente do padrão neste dia.</p>`;
+  }
+  return h + '</div></section>';
+}
+
+function counterRow({ fk, act, data, label, value, goal, unit, done, step, extra = '' }) {
+  return `<div class="counter-row ${done ? 'done' : ''}" data-fk="${fk}-row">
+    <div class="lbl">${label}<small>${num(value)} / ${num(goal)} ${unit}</small>${extra}</div>
+    <div class="counter">
+      <button type="button" data-act="${act}" ${data} data-delta="-${step}" data-fk="${fk}-minus" aria-label="Diminuir ${esc(stripTags(label))}">−</button>
+      <output aria-live="polite">${num(value)}</output>
+      <button type="button" data-act="${act}" ${data} data-delta="${step}" data-fk="${fk}-plus" aria-label="Aumentar ${esc(stripTags(label))}">+</button>
+    </div></div>`;
+}
+const stripTags = s => String(s).replace(/<[^>]*>/g, '');
+
+function cardStudy(d, wd, day) {
+  let h = `<section class="card area-estudos"><h3>📚 Estudos</h3><div class="stack">`;
+  if (!isStudy(wd)) {
+    h += `<p>Dia livre de estudo. Se quiser, registre mesmo assim:</p>`;
+  }
+  const step = Number(state.settings.studyStep) || 0.5;
+  state.settings.studySplit.forEach(s => {
+    const v = Number(day.study[s.id]) || 0;
+    h += counterRow({ fk: `st-${d}-${s.id}`, act: 'study', data: `data-date="${d}" data-id="${esc(s.id)}"`, label: esc(s.label), value: v, goal: s.hours, unit: 'h', done: isStudy(wd) && v >= s.hours, step });
+  });
+  const tot = studyTotal(day), g = studyGoal();
+  h += `<div class="small"><div class="row"><span class="grow">Total do dia</span><b>${num(tot)} / ${num(g)} h</b></div>${bar(g ? tot / g : 0, 'var(--c-estudos)', 'Horas de estudo do dia')}</div>`;
+  return h + '</div></section>';
+}
+
+function cardHabits(d, wd, day, sMap) {
+  let h = `<section class="card area-habitos"><h3>✅ Hábitos</h3><div class="stack">`;
+  const enabled = state.habits.filter(x => x.enabled);
+  if (!enabled.length) h += `<p class="muted small">Nenhum hábito ativo. Ative em Editar → Hábitos.</p>`;
+  enabled.forEach(hb => {
+    const applies = habitApplies(hb, wd), st = streakBadge(streak(hb.id, sMap));
+    const label = `${hb.icon ? hb.icon + ' ' : ''}${esc(hb.label)}`;
+    if (!applies) {
+      h += `<div class="check na" aria-disabled="true"><span class="box" aria-hidden="true">–</span><span class="lbl">${label}<small>Não se aplica hoje (${hb.when === 'training' ? 'descanso' : 'dia livre'})</small></span>${st}</div>`;
+      return;
+    }
+    if (hb.type === 'water') {
+      const v = day.habits[hb.id] || 0, goal = bottlesGoal(), L = Number(state.settings.bottleLiters) || 1;
+      const icons = Array.from({ length: Math.max(goal, v) }, (_, i) => `<span class="${i < v ? '' : 'off'}" aria-hidden="true">💧</span>`).join('');
+      h += counterRow({
+        fk: `w-${d}`, act: 'water', data: `data-date="${d}" data-id="${esc(hb.id)}"`, label: `${label} ${st}`,
+        value: v * L, goal: goal * L, unit: L === 1 ? 'L' : `L · ${v}/${goal} de ${num(L)} L`, done: v >= goal, step: 1,
+        extra: `<div class="bottles">${icons}</div>`
+      });
+    } else if (hb.type === 'study') {
+      const tot = studyTotal(day), g = studyGoal(), done = tot >= g;
+      h += `<div class="check ${done ? 'done' : ''}" role="group" aria-label="${esc(hb.label)}: ${num(tot)} de ${num(g)} horas">
+        <span class="box" aria-hidden="true">✓</span><span class="lbl">${label}<small>${num(tot)} / ${num(g)} h · conta pelo card Estudos</small>${bar(g ? tot / g : 0, 'var(--c-estudos)', 'Estudo', 'mini')}</span>${st}</div>`;
+    } else {
+      const sub = hb.type === 'wake' ? `Alvo: até ${esc(state.settings.wakeTarget)}` : '';
+      h += checkBtn({ fk: `hb-${d}-${hb.id}`, act: 'toggle-habit', data: `data-date="${d}" data-id="${esc(hb.id)}"`, label, sub, done: !!day.habits[hb.id], extra: st });
+    }
+  });
+  return h + '</div></section>';
+}
+
+/* ============================== Visão da semana ============================== */
+function renderWeek() {
+  const st = weekStats(), t = todayISO();
+  let h = `<section class="card"><div class="hero"><div class="grow"><h2>Semana ${fmtBR(state.week.start)} – ${fmtBR(weekEnd())}</h2>
+    <div class="muted">Metas da semana: ${st.goals.filter(g => g.done).length}/${st.goals.length}</div></div>${donut(st.overall, 'var(--primary)', 'Semana')}</div>
+    ${AREAS.map(a => progRow(a.label, st.areas[a.id], a.color)).join('')}
+    ${progRow('Metas', st.goalsPct, 'var(--primary)')}</section>`;
+
+  h += `<section class="card"><h3>🎯 Metas da semana</h3>`;
+  AREAS.filter(a => a.id !== 'habitos' || st.goals.some(g => g.area === 'habitos')).forEach(a => {
+    const gs = st.goals.filter(g => g.area === a.id);
+    if (!gs.length) return;
+    h += `<div class="goal-area">${a.icon} ${a.label}</div><div class="stack">`;
+    gs.forEach(g => {
+      const sub = [g.m ? `${num(g.m.v)}/${num(g.m.t)} ${g.m.unit}` : '', g.carried ? '↪ da semana anterior' : ''].filter(Boolean).join(' · ');
+      const mini = g.m && g.m.t ? bar(g.m.v / g.m.t, a.color, g.text, 'mini') : '';
+      h += checkBtn({ fk: 'goal-' + g.id, act: 'toggle-goal', data: `data-id="${esc(g.id)}"`, label: esc(g.text) + mini, sub, done: g.done });
+    });
+    h += '</div>';
+  });
+  h += `</section>`;
+
+  h += `<section><h3 class="sr-only">Dias</h3>`;
+  st.per.forEach(p => {
+    const d = p.date, wd = weekdayIdx(d), day = state.week.days[d], fx = fixedFor(d);
+    const meta = [];
+    if (isRest(wd)) meta.push('🛌 Descanso');
+    else if (fx.length) meta.push(`💪 ${fx.filter(f => day.fixedDone[f.id]).length}/${fx.length} ${fx.map(f => f.text).join(' + ')}`);
+    if (day.demands.length) meta.push(`💼 ${day.demands.filter(x => x.done).length}/${day.demands.length} demandas`);
+    if (isStudy(wd)) meta.push(`📚 ${num(studyTotal(day))}/${num(studyGoal())} h`);
+    meta.push(`✅ ${p.areas.habitos.done}/${p.areas.habitos.total} hábitos`);
+    if (day.events.length) meta.push(`📅 ${day.events.length} compromisso${day.events.length > 1 ? 's' : ''}`);
+    h += `<button type="button" class="daycard ${d === t ? 'today' : ''}" data-act="open-day" data-date="${d}" aria-label="Abrir ${WD_LONG[wd]} ${fmtBR(d)}, ${pctTxt(p.pct)}">
+      <span class="head"><b>${WD_LONG[wd]}</b><span class="muted">${fmtBR(d)}</span>${d === t ? '<span class="badge-today">HOJE</span>' : ''}<span class="grow"></span><b>${pctTxt(p.pct)}</b></span>
+      ${bar(p.pct, 'var(--primary)', 'Progresso do dia')}<span class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span></button>`;
+  });
+  h += `</section>`;
+  h += `<button type="button" class="btn primary block" data-act="new-week">➕ Nova semana</button>
+    <p class="muted small" style="text-align:center">Arquiva esta semana no histórico e começa a próxima com tudo desmarcado.</p>`;
+  return h;
+}
+/* ============================== Gráficos (SVG) ============================== */
+function svgBars(items) {
+  const W = 320, H = 180, pl = 30, pr = 6, pt = 18, pb = 36, ch = H - pt - pb, n = items.length;
+  const cw = (W - pl - pr) / n, bw = Math.min(28, cw * .62);
+  let g = '';
+  [0, .5, 1].forEach(v => {
+    const y = pt + ch * (1 - v);
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" class="grid"/><text x="${pl - 4}" y="${y + 3}" class="axis" text-anchor="end">${v * 100}%</text>`;
+  });
+  items.forEach((it, i) => {
+    const x = pl + cw * i + cw / 2;
+    if (it.value != null) {
+      const bh = Math.max(clamp01(it.value) * ch, it.value > 0 ? 2 : 0);
+      g += `<rect x="${(x - bw / 2).toFixed(1)}" y="${(pt + ch - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="4" style="fill:${it.color || 'var(--primary)'}"/>`;
+      g += `<text x="${x.toFixed(1)}" y="${(pt + ch - bh - 4).toFixed(1)}" class="val" text-anchor="middle">${Math.round(it.value * 100)}</text>`;
+    } else g += `<text x="${x.toFixed(1)}" y="${pt + ch - 4}" class="val" text-anchor="middle">—</text>`;
+    g += `<text x="${x.toFixed(1)}" y="${H - pb + 15}" class="axis ${it.hl ? 'axis-hl' : ''}" text-anchor="middle">${esc(it.label)}</text>`;
+    if (it.sub) g += `<text x="${x.toFixed(1)}" y="${H - pb + 28}" class="axis" text-anchor="middle">${esc(it.sub)}</text>`;
+  });
+  const desc = items.map(it => `${it.label}${it.sub ? ' ' + it.sub : ''}: ${pctTxt(it.value)}`).join(', ');
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="${esc(desc)}">${g}</svg>`;
+}
+
+function svgLines(labels, series) {
+  const W = 320, H = 190, pl = 30, pr = 14, pt = 14, pb = 30, ch = H - pt - pb, n = labels.length;
+  const X = i => n === 1 ? pl + (W - pl - pr) / 2 : pl + (W - pl - pr) * i / (n - 1);
+  const Y = v => pt + ch * (1 - clamp01(v));
+  let g = '';
+  [0, .5, 1].forEach(v => { const y = Y(v); g += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" class="grid"/><text x="${pl - 4}" y="${y + 3}" class="axis" text-anchor="end">${v * 100}%</text>`; });
+  const every = Math.ceil(n / 7);
+  labels.forEach((l, i) => { if (i % every === 0 || i === n - 1) g += `<text x="${X(i).toFixed(1)}" y="${H - 10}" class="axis" text-anchor="middle">${esc(l)}</text>`; });
+  series.forEach(s => {
+    const pts = s.values.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean);
+    if (pts.length > 1) g += `<polyline points="${pts.map(p => p.map(x => x.toFixed(1)).join(',')).join(' ')}" style="fill:none;stroke:${s.color};stroke-width:${s.w};stroke-linejoin:round;stroke-linecap:round;opacity:${s.o || 1}"/>`;
+    pts.forEach(p => { g += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${s.w + 1}" style="fill:${s.color};opacity:${s.o || 1}"/>`; });
+  });
+  const main = series[0];
+  const desc = 'Evolução semanal: ' + labels.map((l, i) => `${l} ${pctTxt(main.values[i])}`).join(', ');
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="${esc(desc)}">${g}</svg>`;
+}
+
+function renderCharts() {
+  const st = weekStats(), t = todayISO();
+  let h = `<section class="card"><h3>📅 Conclusão por dia</h3>${svgBars(st.per.map(p => ({
+    label: WD_SHORT[weekdayIdx(p.date)], sub: fmtBR(p.date), value: p.pct, hl: p.date === t,
+    color: p.date === t ? 'var(--primary)' : 'color-mix(in srgb, var(--primary) 55%, var(--track))'
+  })))}</section>`;
+
+  h += `<section class="card"><h3>🧭 Por área (semana)</h3><div class="donut-grid">${AREAS.map(a => donut(st.areas[a.id], a.color, a.label)).join('')}</div>
+    ${svgBars(AREAS.map(a => ({ label: a.label, value: st.areas[a.id], color: a.color })))}</section>`;
+
+  const weeks = state.history.slice(-11);
+  const labels = [...weeks.map(w => fmtBR(w.start)), 'Atual'];
+  const series = [{ name: 'Geral', color: 'var(--primary)', w: 3, values: [...weeks.map(w => w.summary.overall), st.overall] },
+    ...AREAS.map(a => ({ name: a.label, color: a.color, w: 1.5, o: .75, values: [...weeks.map(w => w.summary.areas?.[a.id] ?? null), st.areas[a.id]] }))];
+  h += `<section class="card"><h3>📈 Evolução semanal</h3>${weeks.length ? '' : '<p class="muted small">A linha aparece a partir da 2ª semana. Use “Nova semana” no domingo à noite ou na segunda.</p>'}
+    ${svgLines(labels, series)}<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join('')}</div></section>`;
+
+  const sMap = streakMap(), live = liveHabitMap();
+  const dates = weekDates();
+  h += `<section class="card"><h3>🔥 Hábitos e sequências</h3><div style="overflow-x:auto"><table class="heat">
+    <thead><tr><th scope="col" class="sr-only">Hábito</th>${dates.map(d => `<th scope="col">${WD_SHORT[weekdayIdx(d)][0]}</th>`).join('')}<th scope="col">🔥</th></tr></thead><tbody>`;
+  state.habits.filter(x => x.enabled).forEach(hb => {
+    h += `<tr><th scope="row" class="h" title="${esc(hb.label)}">${hb.icon || ''} ${esc(hb.label)}</th>`;
+    dates.forEach(d => {
+      const v = live[d][hb.id], score = v === null ? null : habitScore(hb, state.week.days[d]);
+      let cls = 'c-miss', txt = '', lab = 'não feito';
+      if (v === null) { cls = 'c-na'; txt = '·'; lab = 'não se aplica'; }
+      else if (v) { cls = 'c-done'; txt = '✓'; lab = 'feito'; }
+      else if (d > t) { cls = 'c-future'; lab = 'futuro'; }
+      else if (score > 0) { cls = 'c-part'; lab = 'parcial'; }
+      h += `<td class="${cls}" aria-label="${WD_LONG[weekdayIdx(d)]}: ${lab}">${txt}</td>`;
+    });
+    h += `<td class="st">${streak(hb.id, sMap)}</td></tr>`;
+  });
+  h += `</tbody></table></div><p class="muted small">🔥 = dias seguidos. Dias que não se aplicam (ex.: treino no domingo) não quebram a sequência.</p></section>`;
+  return h;
+}
+
+/* ============================== Histórico ============================== */
+function renderHistory() {
+  const st = weekStats(), hist = state.history;
+  if (!hist.length) return `<section class="card"><h3>🕘 Histórico</h3><p class="muted">Ainda não há semanas arquivadas. Ao tocar em <b>Nova semana</b>, a semana atual vem para cá.</p></section>`;
+  const prev = hist[hist.length - 1].summary;
+  const mean = k => avg(hist.map(w => k === 'overall' ? w.summary.overall : k === 'goals' ? (w.summary.goals?.total ? w.summary.goals.done / w.summary.goals.total : null) : w.summary.areas?.[k]).filter(x => x != null));
+  const rows = [['Geral', 'overall', st.overall, prev.overall], ...AREAS.map(a => [a.label, a.id, st.areas[a.id], prev.areas?.[a.id]]),
+    ['Metas', 'goals', st.goalsPct, prev.goals?.total ? prev.goals.done / prev.goals.total : null]];
+  const delta = (a, b) => {
+    if (a == null || b == null) return '—';
+    const dlt = Math.round((a - b) * 100);
+    return dlt > 0 ? `<span class="up">▲ ${dlt}</span>` : dlt < 0 ? `<span class="down">▼ ${-dlt}</span>` : '=';
+  };
+  let h = `<section class="card"><h3>⚖️ Comparação</h3><table class="cmp"><thead><tr><th scope="col">Área</th><th scope="col">Atual</th><th scope="col">Anterior</th><th scope="col">Média</th><th scope="col">Δ</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${r[0]}</td><td><b>${pctTxt(r[2])}</b></td><td>${pctTxt(r[3])}</td><td>${pctTxt(mean(r[1]))}</td><td>${delta(r[2], r[3])}</td></tr>`).join('')}
+    </tbody></table><p class="muted small">Δ = diferença em pontos percentuais entre a semana atual e a anterior.</p></section>`;
+
+  const best = hist.reduce((b, w) => (w.summary.overall ?? -1) > (b.summary.overall ?? -1) ? w : b, hist[0]);
+  h += `<p class="muted small">🏆 Melhor semana: ${fmtBR(best.start)}–${fmtBR(best.end)} (${pctTxt(best.summary.overall)}) · ${hist.length} semana${hist.length > 1 ? 's' : ''} arquivada${hist.length > 1 ? 's' : ''}</p>`;
+  hist.slice().reverse().forEach((w, ri) => {
+    const idx = hist.length - 1 - ri, s = w.summary;
+    h += `<details class="sec"><summary>${fmtBR(w.start)} – ${fmtBR(w.end)}<span class="muted" style="margin-left:auto">${pctTxt(s.overall)}</span></summary><div class="inner">
+      ${AREAS.map(a => progRow(a.label, s.areas?.[a.id], a.color)).join('')}
+      ${svgBars((w.days || []).map(d => ({ label: WD_SHORT[weekdayIdx(d.date)], sub: fmtBR(d.date), value: d.pct })))}
+      <div class="sub-h">Metas (${s.goals?.done ?? 0}/${s.goals?.total ?? 0})</div>
+      <ul class="small">${(w.goals || []).map(g => `<li>${g.done ? '✅' : '⬜'} ${esc(g.text)}${g.metric ? ` <span class="muted">(${esc(g.metric)})</span>` : ''}</li>`).join('')}</ul>
+      <div class="sub-h">Hábitos (dias cumpridos)</div>
+      <ul class="small">${(w.habits || []).map(hb => {
+        const vals = (w.days || []).map(d => d.habitDone?.[hb.id]).filter(v => v !== null && v !== undefined);
+        return `<li>${hb.icon || ''} ${esc(hb.label)}: ${vals.filter(Boolean).length}/${vals.length}</li>`;
+      }).join('')}</ul>
+      <button type="button" class="btn sm danger" data-act="del-history" data-idx="${idx}">Remover do histórico</button>
+    </div></details>`;
+  });
+  return h;
+}
+
+/* ============================== Editor ============================== */
+function getList(key, create) {
+  const [kind, arg] = key.split(/:(.*)/s);
+  if (kind === 'goals') return state.goals;
+  if (kind === 'habits') return state.habits;
+  if (kind === 'fixed') return state.fixed[Number(arg)];
+  const day = state.week.days[arg];
+  if (!day) return null;
+  if (kind === 'demands') return day.demands;
+  if (kind === 'events') return day.events;
+  if (kind === 'override') {
+    if (!day.fixedOverride && create) day.fixedOverride = clone(state.fixed[weekdayIdx(arg)] || []);
+    return day.fixedOverride || state.fixed[weekdayIdx(arg)];
+  }
+  return null;
+}
+
+function listEditor(key, items, opts = {}) {
+  const k = esc(key);
+  let h = items.length ? '' : `<p class="muted small">Nada aqui ainda.</p>`;
+  items.forEach((it, i) => {
+    const label = it.text ?? it.label;
+    h += `<div class="ed-row">
+      <button type="button" class="ed-btn" data-act="move" data-key="${k}" data-id="${esc(it.id)}" data-dir="-1" aria-label="Mover para cima: ${esc(label)}" ${i === 0 ? 'disabled' : ''}>↑</button>
+      <button type="button" class="ed-btn" data-act="move" data-key="${k}" data-id="${esc(it.id)}" data-dir="1" aria-label="Mover para baixo: ${esc(label)}" ${i === items.length - 1 ? 'disabled' : ''}>↓</button>
+      ${opts.icons ? `<input type="text" class="ico-in" data-edit-icon="${k}" data-id="${esc(it.id)}" value="${esc(it.icon || '')}" aria-label="Ícone de ${esc(label)}" maxlength="4">` : ''}
+      <input type="text" data-edit="${k}" data-id="${esc(it.id)}" value="${esc(label)}" aria-label="Editar: ${esc(label)}">
+      ${opts.area ? `<select data-edit-area="${k}" data-id="${esc(it.id)}" aria-label="Área de ${esc(label)}">${AREAS.map(a => `<option value="${a.id}" ${a.id === it.area ? 'selected' : ''}>${a.icon}</option>`).join('')}</select>` : ''}
+      ${opts.toggle ? `<button type="button" class="switch" data-act="toggle-enabled" data-id="${esc(it.id)}" aria-pressed="${!!it.enabled}" aria-label="${it.enabled ? 'Desativar' : 'Ativar'} ${esc(label)}">${it.enabled ? 'Ativo' : 'Off'}</button>` : ''}
+      <button type="button" class="ed-btn del push" data-act="remove" data-key="${k}" data-id="${esc(it.id)}" aria-label="Remover: ${esc(label)}">🗑</button>
+    </div>`;
+  });
+  const fid = 'add-' + key.replace(/[^a-z0-9]/gi, '-');
+  h += `<form class="add-form" data-add="${k}"><label class="sr-only" for="${fid}">Adicionar item</label>
+    ${opts.icons ? `<input type="text" class="ico-in" name="icon" placeholder="🙂" aria-label="Ícone" maxlength="4">` : ''}
+    <input type="text" id="${fid}" name="text" placeholder="${esc(opts.placeholder || 'Novo item')}" autocomplete="off" required>
+    ${opts.area ? `<select name="area" aria-label="Área">${AREAS.map(a => `<option value="${a.id}">${a.icon} ${a.label}</option>`).join('')}</select>` : ''}
+    ${opts.when ? `<select name="when" aria-label="Quando">${Object.entries(WHEN_LABEL).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>` : ''}
+    <button class="btn" type="submit">Adicionar</button></form>`;
+  return h;
+}
+
+function sec(id, title, inner) {
+  return `<details class="sec" data-sec="${id}" ${ui.open.has(id) ? 'open' : ''}><summary>${title}</summary><div class="inner">${inner}</div></details>`;
+}
+
+function renderEdit() {
+  const s = state.settings;
+  let h = `<p class="muted small">Tudo o que você muda aqui é salvo na hora, só neste aparelho. Faça backups de vez em quando.</p>`;
+  h += sec('ed-pref', '⚙️ Preferências', `
+    <label class="field">Horário de chegada no trabalho<input type="time" data-setting="workStartTime" value="${esc(s.workStartTime)}"></label>
+    <label class="field">Horário-alvo para acordar<input type="time" data-setting="wakeTarget" value="${esc(s.wakeTarget)}"></label>
+    <label class="field">Meta de água por dia (litros)<input type="number" min="0.5" max="15" step="0.5" inputmode="decimal" data-setting="waterGoalLiters" value="${esc(s.waterGoalLiters)}"></label>
+    <label class="field">Tamanho da garrafa/copo do contador
+      <select data-setting="bottleLiters">${[0.25, 0.3, 0.5, 0.75, 1, 1.5, 2].map(v => `<option value="${v}" ${Number(s.bottleLiters) === v ? 'selected' : ''}>${num(v)} L</option>`).join('')}</select></label>
+    ${s.studySplit.map((x, i) => `<label class="field">Meta diária de ${esc(x.label)} (horas)<input type="number" min="0" max="12" step="0.5" inputmode="decimal" data-setting="study:${i}" value="${esc(x.hours)}"></label>`).join('')}
+    <label class="field">Tema<select data-setting="theme">${[['auto', 'Automático (do sistema)'], ['light', 'Claro'], ['dark', 'Escuro']].map(([v, l]) => `<option value="${v}" ${s.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`);
+  h += sec('ed-metas', '🎯 Metas semanais', `<p class="muted small">Metas com progresso automático (horas, dias) continuam calculando sozinhas, mas você pode marcar/desmarcar com um toque.</p>${listEditor('goals', state.goals, { area: true, placeholder: 'Nova meta' })}`);
+  h += sec('ed-fixas', '🏋️ Atividades fixas (padrão semanal)', WD_LONG.map((n, wd) => `<div class="sub-h">${n}${isRest(wd) ? ' · descanso total' : ''}</div>${listEditor('fixed:' + wd, state.fixed[wd], { icons: true, placeholder: 'Nova atividade' })}`).join(''));
+  h += sec('ed-demandas', '💼 Demandas por dia', weekDates().map(d => `<div class="sub-h">${WD_LONG[weekdayIdx(d)]} ${fmtBR(d)}</div>${listEditor('demands:' + d, state.week.days[d].demands, { placeholder: 'Nova demanda' })}`).join(''));
+  h += sec('ed-eventos', '📅 Compromissos, provas e prazos', weekDates().map(d => `<div class="sub-h">${WD_LONG[weekdayIdx(d)]} ${fmtBR(d)}</div>${listEditor('events:' + d, state.week.days[d].events, { placeholder: 'Ex.: 19h – simulado AWS' })}`).join(''));
+  h += sec('ed-habitos', '✅ Hábitos', `<p class="muted small">Use o botão Ativo/Off para ligar ou desligar (os extras sugeridos já vêm ativos). Água, estudo e acordar usam as metas de Preferências.</p>
+    ${listEditor('habits', state.habits, { icons: true, toggle: true, when: true, placeholder: 'Novo hábito' })}`);
+  h += sec('ed-backup', '💾 Backup (JSON)', `<p class="small">Exporte para guardar uma cópia (Drive, e-mail, WhatsApp) ou levar para outro aparelho.</p>
+    <div class="row" style="flex-wrap:wrap"><button type="button" class="btn primary" data-act="export">⬇️ Exportar JSON</button>
+    <button type="button" class="btn" data-act="import">⬆️ Importar JSON</button></div>`);
+  h += sec('ed-perigo', '⚠️ Zona de perigo', `<p class="small">Apaga tudo deste aparelho (semana, histórico e edições) e volta para a configuração inicial.</p>
+    <button type="button" class="btn danger" data-act="reset-all">Apagar todos os dados</button>`);
+  h += `<p class="muted small" style="text-align:center">Configuração v${CONFIG.configVersion} · semana ${fmtBR(state.week.start)}–${fmtBR(weekEnd())}</p>`;
+  return h;
+}
+/* ============================== Render ============================== */
+const app = document.getElementById('app');
+
+function banners() {
+  let h = '';
+  if (ui.swWaiting) h += `<div class="banner">🔄 <b>Nova versão disponível.</b><div class="row"><button type="button" class="btn primary sm" data-act="sw-update">Atualizar agora</button></div></div>`;
+  if (CONFIG.changelog?.length && state.seenChangelog !== CONFIG.configVersion) {
+    h += `<div class="banner">✨ <b>Painel atualizado</b><ul>${CONFIG.changelog.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
+      <div class="row"><button type="button" class="btn sm" data-act="dismiss-changelog">Entendi</button></div></div>`;
+  }
+  if (todayISO() > weekEnd()) h += `<div class="banner">📦 A semana ${fmtBR(state.week.start)}–${fmtBR(weekEnd())} terminou.
+    <div class="row"><button type="button" class="btn primary sm" data-act="new-week">Começar nova semana</button></div></div>`;
+  return h;
+}
+
+function render() {
+  if (!state.week.days[ui.day]) ui.day = defaultDay();
+  const fk = document.activeElement?.dataset?.fk;
+  const views = { dia: renderDay, semana: renderWeek, graficos: renderCharts, historico: renderHistory, editar: renderEdit };
+  app.innerHTML = banners() + views[ui.tab]();
+  document.querySelectorAll('nav.tabs button').forEach(b => {
+    if (b.dataset.tab === ui.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  document.getElementById('weekRange').textContent = `Semana ${fmtBR(state.week.start)} – ${fmtBR(weekEnd())}`;
+  const th = { auto: '🌓 Auto', light: '☀️ Claro', dark: '🌙 Escuro' }[state.settings.theme] || '🌓 Auto';
+  const tb = document.getElementById('themeBtn');
+  tb.textContent = th; tb.setAttribute('aria-label', `Tema: ${th.slice(3)}. Tocar para alternar`);
+  if (fk) document.querySelector(`[data-fk="${CSS.escape(fk)}"]`)?.focus({ preventScroll: true });
+  if (ui.pop) { document.querySelector(`[data-fk="${CSS.escape(ui.pop)}"]`)?.classList.add('pop'); ui.pop = null; }
+}
+
+function commit(popKey) {
+  save();
+  if (popKey) { ui.pop = popKey; navigator.vibrate?.(12); }
+  render();
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function applyTheme() {
+  const t = state.settings.theme;
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b1120' : '#f3f5fa');
+}
+
+/* ============================== Ações ============================== */
+function moveItem(list, id, dir) {
+  const i = list.findIndex(x => x.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+}
+
+const actions = {
+  'select-day': el => { ui.day = el.dataset.date; render(); },
+  'open-day': el => { ui.day = el.dataset.date; ui.tab = 'dia'; render(); window.scrollTo(0, 0); },
+  'toggle-ontime': el => { const d = state.week.days[ui.day]; d.onTime = !d.onTime; commit(el.dataset.fk); },
+  'toggle-demand': el => { const x = state.week.days[el.dataset.date].demands.find(y => y.id === el.dataset.id); if (x) { x.done = !x.done; commit(el.dataset.fk); } },
+  'toggle-fixed': el => { const fd = state.week.days[el.dataset.date].fixedDone; fd[el.dataset.id] = !fd[el.dataset.id]; commit(el.dataset.fk); },
+  'toggle-habit': el => { const hb = state.week.days[el.dataset.date].habits; hb[el.dataset.id] = !hb[el.dataset.id]; commit(el.dataset.fk); },
+  'water': el => {
+    const hb = state.week.days[el.dataset.date].habits, v = (hb[el.dataset.id] || 0) + Number(el.dataset.delta);
+    hb[el.dataset.id] = Math.max(0, Math.min(v, bottlesGoal() * 3)); commit(el.dataset.fk.replace(/-(plus|minus)$/, '-row'));
+  },
+  'study': el => {
+    const st = state.week.days[el.dataset.date].study, v = (Number(st[el.dataset.id]) || 0) + Number(el.dataset.delta);
+    st[el.dataset.id] = Math.max(0, Math.min(16, Math.round(v * 100) / 100)); commit(el.dataset.fk.replace(/-(plus|minus)$/, '-row'));
+  },
+  'toggle-goal': el => {
+    const g = goalStatus().find(x => x.id === el.dataset.id);
+    if (g) { state.week.goalsDone[g.id] = !g.done; commit(el.dataset.fk); }
+  },
+  'toggle-edit': el => { ui.editing[el.dataset.key] = !ui.editing[el.dataset.key]; render(); },
+  'reset-override': el => { state.week.days[el.dataset.date].fixedOverride = null; commit(); toast('Treino padrão restaurado'); },
+  'move': el => { const l = getList(el.dataset.key, true); if (l) { moveItem(l, el.dataset.id, Number(el.dataset.dir)); commit(); } },
+  'remove': el => {
+    const l = getList(el.dataset.key, true); if (!l) return;
+    const i = l.findIndex(x => x.id === el.dataset.id); if (i < 0) return;
+    if (!confirm(`Remover “${l[i].text ?? l[i].label}”?`)) return;
+    l.splice(i, 1); commit(); toast('Removido');
+  },
+  'toggle-enabled': el => { const h = state.habits.find(x => x.id === el.dataset.id); if (h) { h.enabled = !h.enabled; commit(); } },
+  'new-week': () => openNewWeek(),
+  'export': () => exportJSON(),
+  'import': () => document.getElementById('importFile').click(),
+  'reset-all': () => {
+    if (!confirm('Apagar TODOS os dados deste aparelho? Exporte um backup antes, se quiser.')) return;
+    if (!confirm('Tem certeza? Isso não pode ser desfeito.')) return;
+    localStorage.removeItem(STORAGE_KEY); hydrate(null); ui.day = defaultDay(); commit(); toast('Dados apagados');
+  },
+  'del-history': el => {
+    if (!confirm('Remover esta semana do histórico?')) return;
+    state.history.splice(Number(el.dataset.idx), 1); commit(); toast('Semana removida do histórico');
+  },
+  'dismiss-changelog': () => { state.seenChangelog = CONFIG.configVersion; commit(); },
+  'sw-update': () => { ui.swWaiting?.postMessage('skipWaiting'); }
+};
+
+app.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  actions[el.dataset.act]?.(el);
+});
+
+app.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.edit !== undefined || el.dataset.editIcon !== undefined) {
+    const key = el.dataset.edit ?? el.dataset.editIcon, list = getList(key, true), it = list?.find(x => x.id === el.dataset.id);
+    if (!it) return;
+    const v = el.value.trim();
+    if (el.dataset.editIcon !== undefined) it.icon = v;
+    else if (!v) { el.value = it.text ?? it.label; return toast('O texto não pode ficar vazio'); }
+    else if ('label' in it && !('text' in it)) it.label = v; else it.text = v;
+    commit(); toast('Salvo');
+  } else if (el.dataset.editArea !== undefined) {
+    const it = getList(el.dataset.editArea)?.find(x => x.id === el.dataset.id);
+    if (it) { it.area = el.value; commit(); toast('Salvo'); }
+  } else if (el.dataset.setting) {
+    const k = el.dataset.setting, s = state.settings;
+    if (k.startsWith('study:')) {
+      const v = Number(el.value); if (!(v >= 0)) return render();
+      s.studySplit[Number(k.slice(6))].hours = v;
+    } else if (k === 'waterGoalLiters' || k === 'bottleLiters') {
+      const v = Number(el.value); if (!(v > 0)) return render();
+      s[k] = v;
+    } else if (k === 'workStartTime' || k === 'wakeTarget') {
+      if (!/^\d{2}:\d{2}$/.test(el.value)) return render();
+      s[k] = el.value;
+    } else s[k] = el.value;
+    if (k === 'theme') applyTheme();
+    commit(); toast('Preferência salva');
+  }
+});
+
+app.addEventListener('submit', e => {
+  const form = e.target.closest('form[data-add]');
+  if (!form) return;
+  e.preventDefault();
+  const fd = new FormData(form), text = String(fd.get('text') || '').trim();
+  if (!text) return;
+  const key = form.dataset.add, list = getList(key, true);
+  if (!list) return;
+  const kind = key.split(':')[0], item = { id: uid() };
+  if (kind === 'habits') Object.assign(item, { icon: String(fd.get('icon') || '').trim() || '⭐', label: text, type: 'check', when: fd.get('when') || 'all', enabled: true, custom: true });
+  else if (kind === 'goals') Object.assign(item, { area: fd.get('area') || 'trabalho', text });
+  else if (kind === 'demands') Object.assign(item, { text, done: false });
+  else Object.assign(item, { text }, fd.get('icon') ? { icon: String(fd.get('icon')).trim() } : {});
+  list.push(item);
+  const inputId = form.querySelector('input[name=text]')?.id;
+  commit();
+  toast('Adicionado');
+  if (inputId) document.getElementById(inputId)?.focus({ preventScroll: true });
+});
+
+app.addEventListener('toggle', e => {
+  const d = e.target.closest?.('details[data-sec]');
+  if (d) { if (d.open) ui.open.add(d.dataset.sec); else ui.open.delete(d.dataset.sec); }
+}, true);
+
+document.querySelector('nav.tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  if (b.dataset.tab === 'dia' && ui.tab === 'dia') ui.day = defaultDay();
+  ui.tab = b.dataset.tab; render(); window.scrollTo(0, 0);
+});
+
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const order = ['auto', 'light', 'dark'];
+  state.settings.theme = order[(order.indexOf(state.settings.theme) + 1) % 3];
+  applyTheme(); commit();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+
+/* ============================== Nova semana ============================== */
+const dlg = document.getElementById('newWeekDlg'), dlgForm = document.getElementById('newWeekForm');
+function openNewWeek() {
+  const next = addDays(state.week.start, 7), tm = mondayOf(todayISO()), start = tm > next ? tm : next;
+  const pend = [];
+  weekDates().forEach(d => state.week.days[d].demands.forEach(x => { if (!x.done) pend.push({ kind: 'demand', text: x.text, where: `${WD_SHORT[weekdayIdx(d)]} ${fmtBR(d)}` }); }));
+  goalStatus().forEach(g => { if (!g.done && !g.metric) pend.push({ kind: 'goal', text: g.text, area: g.area, where: AREA[g.area]?.label || '' }); });
+  dlgForm.innerHTML = `<h2 id="nwTitle">Começar nova semana?</h2>
+    <p class="small">A semana <b>${fmtBR(state.week.start)}–${fmtBR(weekEnd())}</b> vai para o histórico e a semana <b>${fmtBR(start)}–${fmtBR(addDays(start, 6))}</b> começa com as atividades fixas e os hábitos desmarcados.</p>
+    ${pend.length ? `<p class="small"><b>Levar para a nova semana?</b> Demandas vão para segunda; metas valem só para a próxima semana.</p>
+      <label class="opt"><input type="checkbox" id="nwAll"> <b>Selecionar tudo</b></label>
+      <div class="list">${pend.map((p, i) => `<label class="opt"><input type="checkbox" name="carry" value="${i}"><span>${p.kind === 'demand' ? '💼' : '🎯'} ${esc(p.text)} <span class="muted small">· ${esc(p.where)}</span></span></label>`).join('')}</div>`
+      : `<p class="small muted">Nenhuma pendência — mandou bem! 🎉</p>`}
+    <div class="actions"><button class="btn" value="cancel" type="submit" formnovalidate>Cancelar</button>
+    <button class="btn primary" value="ok" type="submit" id="nwOk">Criar nova semana</button></div>`;
+  dlgForm._pend = pend;
+  dlg.returnValue = '';
+  dlgForm.querySelector('#nwAll')?.addEventListener('change', ev => dlgForm.querySelectorAll('input[name=carry]').forEach(c => { c.checked = ev.target.checked; }));
+  dlg.showModal();
+}
+dlg.addEventListener('close', () => {
+  if (dlg.returnValue !== 'ok') return;
+  const pend = dlgForm._pend || [], chosen = [...dlgForm.querySelectorAll('input[name=carry]:checked')].map(c => pend[Number(c.value)]);
+  const from = `${fmtBR(state.week.start)}–${fmtBR(weekEnd())}`;
+  startNewWeek({ demands: chosen.filter(p => p.kind === 'demand'), goals: chosen.filter(p => p.kind === 'goal') });
+  ui.tab = 'dia'; render(); window.scrollTo(0, 0);
+  toast(`Semana ${from} arquivada. Boa semana! 💪`);
+});
+
+/* ============================== Backup ============================== */
+function exportJSON() {
+  const data = { app: 'painel-semanal', exportedAt: new Date().toISOString(), configVersion: CONFIG.configVersion, state };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `painel-backup-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Backup exportado');
+}
+document.getElementById('importFile').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const s = data?.app === 'painel-semanal' ? data.state : data;
+    if (!isValidState(s)) throw new Error('formato');
+    if (!confirm(`Importar backup com a semana ${fmtBR(s.week.start)} e ${s.history.length} semana(s) no histórico? Os dados atuais serão substituídos.`)) return;
+    hydrate(s); ui.day = defaultDay(); applyTheme(); commit(); toast('Backup importado ✔');
+  } catch (err) {
+    toast('Arquivo inválido. Use um JSON exportado pelo painel.');
+  }
+});
+
+/* ============================== Início ============================== */
+load();
+ui.day = defaultDay();
+applyTheme();
+render();
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      const watch = w => w && w.addEventListener('statechange', () => {
+        if (w.state === 'installed' && navigator.serviceWorker.controller) { ui.swWaiting = w; render(); }
+      });
+      if (reg.waiting && navigator.serviceWorker.controller) { ui.swWaiting = reg.waiting; render(); }
+      reg.addEventListener('updatefound', () => watch(reg.installing));
+    }).catch(() => {});
+    let reloaded = false;
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController && !reloaded) { reloaded = true; location.reload(); }
+    });
+  });
+}
+</script>
+</body>
+</html>
